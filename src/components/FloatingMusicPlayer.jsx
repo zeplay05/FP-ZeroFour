@@ -73,8 +73,10 @@ export function FloatingMusicPlayer() {
     }
   }, [settings.activeTrackId]);
 
-  const playlist = settings.playlist || (settings.track ? [settings.track] : []);
-  const currentTrack = settings.track || playlist[currentTrackIndex] || playlist[0] || null;
+  const playlist = (settings.playlist && settings.playlist.length > 0)
+    ? settings.playlist 
+    : (settings.track ? [settings.track] : []);
+  const currentTrack = playlist[currentTrackIndex] || settings.track || playlist[0] || null;
 
   // Send command to YouTube iframe via postMessage
   const sendYtCommand = (func, args = []) => {
@@ -283,6 +285,7 @@ export function FloatingMusicPlayer() {
           src={currentTrack.url}
           loop
           preload="auto"
+          playsInline
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onTimeUpdate={() => {
@@ -301,16 +304,21 @@ export function FloatingMusicPlayer() {
         />
       )}
 
-      {/* 2. YouTube IFrame Player (Hidden / Off-screen with enablejsapi=1) */}
+      {/* 2. YouTube IFrame Player (Off-screen with enablejsapi=1, static URL to prevent reload on play/pause) */}
       {currentTrack?.source === 'youtube' && ytId && (
         <div className="hidden-yt-player-container" aria-hidden="true">
           <iframe
             ref={ytIframeRef}
             key={ytId}
             title="FP Zerofour Background Music YouTube"
-            src={`https://www.youtube-nocookie.com/embed/${ytId}?enablejsapi=1&autoplay=${isPlaying ? '1' : '0'}&loop=1&playlist=${ytId}&playsinline=1`}
-            allow="autoplay; encrypted-media"
+            src={`https://www.youtube-nocookie.com/embed/${ytId}?enablejsapi=1&loop=1&playlist=${ytId}&playsinline=1&controls=0&disablekb=1&fs=0&rel=0`}
+            allow="autoplay; encrypted-media; picture-in-picture"
             tabIndex="-1"
+            onLoad={() => {
+              if (isPlaying) {
+                setTimeout(() => sendYtCommand('playVideo'), 400);
+              }
+            }}
           />
         </div>
       )}

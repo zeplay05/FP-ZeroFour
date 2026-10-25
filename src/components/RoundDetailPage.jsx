@@ -22,6 +22,7 @@ export function RoundDetailPage({
 
   const bookings = round.bookings || [];
   const numbers = round.numbers || [];
+  const isClosed = round.status === 'closed' || round.status === 'drawn';
 
   // Calculate counts
   const availableNumbers = useMemo(() => {
@@ -36,8 +37,9 @@ export function RoundDetailPage({
     return numbers.filter(n => n.status === 'paid').map(n => n.number);
   }, [numbers]);
 
-  // Click a number on the grid opens remaining selector modal
+  // Click a number on the grid opens remaining selector modal (only if open)
   const handleGridNumberClick = () => {
+    if (isClosed) return;
     setIsRemainingModalOpen(true);
   };
 
@@ -80,8 +82,19 @@ export function RoundDetailPage({
             <div className="round-title-group">
               <h2 className="round-page-title">{round.title}</h2>
               <p className="round-page-subtitle">
-                เบอร์ละ {round.pricePerNumber}.- · เหลือว่าง {availableNumbers.length} เบอร์
-                <span className="promo-header-pill">🔥 {getBoardTypeInfo(round.boardType).name} ({getBoardTypeInfo(round.boardType).promoText})</span>
+                {isClosed ? (
+                  <span className="closed-round-status-pill">
+                    🔒 ตารางประวัติ (ปิดให้บริการจองแล้ว)
+                    {round.winningNumber && (
+                      <span className="winning-badge-inline">🏆 เลขที่ออก: {round.winningNumber}</span>
+                    )}
+                  </span>
+                ) : (
+                  <>
+                    เบอร์ละ {round.pricePerNumber}.- · เหลือว่าง {availableNumbers.length} เบอร์
+                    <span className="promo-header-pill">🔥 {getBoardTypeInfo(round.boardType).name} ({getBoardTypeInfo(round.boardType).promoText})</span>
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -110,15 +123,20 @@ export function RoundDetailPage({
                   <button
                     key={item.number}
                     type="button"
+                    disabled={isClosed}
                     className={`grid-pill-btn ${
                       isPaid ? 'pill-state-paid' :
                       isBooked ? 'pill-state-booked' : 'pill-state-available'
-                    }`}
+                    } ${isClosed ? 'pill-disabled-closed' : ''}`}
                     onClick={() => handleGridNumberClick(item.number)}
-                    title={`เบอร์ ${item.number} : ${
-                      isPaid ? `ชำระแล้ว (${item.customerName || 'ลูกค้า'})` :
-                      isBooked ? `รอยอด (${item.customerName || 'ลูกค้า'})` : 'ว่าง (คลิกเพื่อเลือก)'
-                    }`}
+                    title={
+                      isClosed
+                        ? `เบอร์ ${item.number} (ตารางปิดให้บริการจองแล้ว)`
+                        : `เบอร์ ${item.number} : ${
+                            isPaid ? `ชำระแล้ว (${item.customerName || 'ลูกค้า'})` :
+                            isBooked ? `รอยอด (${item.customerName || 'ลูกค้า'})` : 'ว่าง (คลิกเพื่อเลือก)'
+                          }`
+                    }
                   >
                     {isPaid ? (
                       <span className="pill-booked-text">ติด<br/>จอง</span>
@@ -146,8 +164,8 @@ export function RoundDetailPage({
             </span>
           </div>
 
-          {/* Prominent Quick-Book Banner Button if remaining numbers exist */}
-          {availableNumbers.length > 0 && (
+          {/* Prominent Quick-Book Banner Button only if open */}
+          {!isClosed && availableNumbers.length > 0 && (
             <button
               type="button"
               className="btn-banner-select-chat"
@@ -156,6 +174,23 @@ export function RoundDetailPage({
               <MessageCircle size={18} />
               <span>เลือกเบอร์ที่ยังไม่ออก แล้วเด้งไปแชทเฟส ({availableNumbers.length} เบอร์ว่าง)</span>
             </button>
+          )}
+
+          {/* Banner Notice when round is closed (ประวัติตารางที่ปิดให้บริการจอง) */}
+          {isClosed && (
+            <div className="round-closed-notice-card">
+              <div className="closed-notice-content">
+                <span className="closed-icon-badge">🔒</span>
+                <div>
+                  <h4 className="closed-card-heading">ตารางนี้ปิดให้บริการจองแล้ว</h4>
+                  <p className="closed-card-subtext">
+                    {round.winningNumber 
+                      ? `ผลรางวัลเลขที่ออก: ${round.winningNumber} 🏆`
+                      : 'งวดนี้สิ้นสุดการจองและปิดรอบเรียบร้อยแล้ว'}
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
 
         </div>
@@ -228,13 +263,15 @@ export function RoundDetailPage({
 
       </div>
 
-      {/* Multi-Select Remaining Numbers Modal */}
-      <SelectRemainingNumbersModal
-        isOpen={isRemainingModalOpen}
-        onClose={() => setIsRemainingModalOpen(false)}
-        round={round}
-        availableNumbers={availableNumbers}
-      />
+      {/* Multi-Select Remaining Numbers Modal (Only active if round is open) */}
+      {!isClosed && (
+        <SelectRemainingNumbersModal
+          isOpen={isRemainingModalOpen}
+          onClose={() => setIsRemainingModalOpen(false)}
+          round={round}
+          availableNumbers={availableNumbers}
+        />
+      )}
 
     </div>
   );

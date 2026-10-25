@@ -72,16 +72,15 @@ export function SelectRemainingNumbersModal({
     });
   };
 
-  // Random pick N numbers from available
+  // Random pick N numbers from available (รีเซ็ตและสุ่มใหม่ตามจำนวนที่กด ไม่บวกสะสม)
   const handleRandomPick = (pickCount) => {
-    const unselected = availableNumbers.filter(n => !selectedNumbers.includes(n));
-    if (unselected.length === 0) return;
+    if (!availableNumbers || availableNumbers.length === 0) return;
     
-    // Shuffle unselected
-    const shuffled = [...unselected].sort(() => 0.5 - Math.random());
-    const picked = shuffled.slice(0, pickCount);
+    // Shuffle all available numbers
+    const shuffled = [...availableNumbers].sort(() => 0.5 - Math.random());
+    const picked = shuffled.slice(0, Math.min(pickCount, availableNumbers.length));
     
-    setSelectedNumbers(prev => [...prev, ...picked].sort((a, b) => Number(a) - Number(b)));
+    setSelectedNumbers(picked.sort((a, b) => Number(a) - Number(b)));
   };
 
   // Clear all selections
@@ -194,6 +193,14 @@ export function SelectRemainingNumbersModal({
             <button 
               type="button" 
               className="btn-quick-chip"
+              onClick={() => handleRandomPick(2)}
+              title="สุ่ม 2 เบอร์"
+            >
+              <Sparkles size={12} /> 2 เบอร์
+            </button>
+            <button 
+              type="button" 
+              className="btn-quick-chip"
               onClick={() => handleRandomPick(3)}
               title="สุ่ม 3 เบอร์"
             >
@@ -202,10 +209,10 @@ export function SelectRemainingNumbersModal({
             <button 
               type="button" 
               className="btn-quick-chip"
-              onClick={() => handleRandomPick(5)}
-              title="สุ่ม 5 เบอร์"
+              onClick={() => handleRandomPick(4)}
+              title="สุ่ม 4 เบอร์"
             >
-              <Sparkles size={12} /> 5 เบอร์
+              <Sparkles size={12} /> 4 เบอร์
             </button>
             {selectedNumbers.length > 0 && (
               <button 
