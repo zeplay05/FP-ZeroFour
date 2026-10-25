@@ -52,7 +52,7 @@ export function FloatingMusicPlayer() {
 
     window.addEventListener('fp_music_settings_updated', handleSettingsUpdated);
     window.addEventListener('storage', (e) => {
-      if (e.key === 'fp_zerofour_music_settings_v3' || e.key === 'fp_zerofour_music_settings_v1') {
+      if (e.key === 'fp_zerofour_music_settings_v4' || e.key === 'fp_zerofour_music_settings_v3') {
         setSettings(loadMusicSettings());
       }
     });

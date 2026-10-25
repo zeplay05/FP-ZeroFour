@@ -6,29 +6,29 @@
 export const DEFAULT_MUSIC_SETTINGS = {
   enabled: true,
   autoplay: true, // Default true to play on load / first touch
-  defaultVolume: 45, // 0 - 100
-  activeTrackId: 'track-fp-tcg',
+  defaultVolume: 50, // 0 - 100
+  activeTrackId: 'track-retrograde',
   track: {
-    id: 'track-fp-tcg',
-    title: 'FP TCG - Cyber Gaming Theme',
-    artist: 'FP TCG Sound',
+    id: 'track-retrograde',
+    title: 'Avi Roy - Retrograde',
+    artist: 'Avi Roy',
     source: 'youtube',
-    url: 'https://www.youtube.com/watch?v=4xDzrJKXOOY', // Neon Synthwave Gaming Beat (Not Lofi)
-    thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=150&q=80'
+    url: 'https://www.youtube.com/watch?v=4sH8FkO0iu0',
+    thumbnail: 'https://i.ytimg.com/vi/4sH8FkO0iu0/hqdefault.jpg'
   },
   playlist: [
     {
-      id: 'track-fp-tcg',
-      title: 'FP TCG - Cyber Gaming Theme',
-      artist: 'FP TCG Sound',
+      id: 'track-retrograde',
+      title: 'Avi Roy - Retrograde',
+      artist: 'Avi Roy',
       source: 'youtube',
-      url: 'https://www.youtube.com/watch?v=4xDzrJKXOOY',
-      thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=150&q=80'
+      url: 'https://www.youtube.com/watch?v=4sH8FkO0iu0',
+      thumbnail: 'https://i.ytimg.com/vi/4sH8FkO0iu0/hqdefault.jpg'
     }
   ]
 };
 
-const STORAGE_KEY = 'fp_zerofour_music_settings_v3';
+const STORAGE_KEY = 'fp_zerofour_music_settings_v4';
 
 /**
  * Detect track source type from URL
@@ -93,19 +93,14 @@ export function extractSpotifyEmbedUrl(url = '') {
  */
 export function loadMusicSettings() {
   try {
-    // Purge any old v1 or v2 storage that had lofi
+    // Purge any old v1, v2, or v3 storage
     try {
-      const v1 = localStorage.getItem('fp_zerofour_music_settings_v1');
-      if (v1 && (v1.includes('jfKfPfyJRdk') || v1.toLowerCase().includes('lofi'))) {
-        localStorage.removeItem('fp_zerofour_music_settings_v1');
-      }
-      const v2 = localStorage.getItem('fp_zerofour_music_settings_v2');
-      if (v2 && (v2.includes('jfKfPfyJRdk') || v2.toLowerCase().includes('lofi'))) {
-        localStorage.removeItem('fp_zerofour_music_settings_v2');
-      }
+      localStorage.removeItem('fp_zerofour_music_settings_v1');
+      localStorage.removeItem('fp_zerofour_music_settings_v2');
+      localStorage.removeItem('fp_zerofour_music_settings_v3');
     } catch {}
 
-    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('fp_zerofour_music_settings_v2');
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       // If parsed contains old Lofi Girl track, purge it completely
