@@ -78,8 +78,21 @@ export function FloatingMusicPlayer() {
   // Always prioritize single track configured by admin if available
   const currentTrack = settings.track || playlist[currentTrackIndex] || playlist[0] || null;
 
-  // Send command to YouTube iframe via postMessage
+  // YouTube player instance reference
+  const ytPlayerRef = useRef(null);
+
+  // Send command to YouTube iframe via postMessage & official YT.Player API
   const sendYtCommand = (func, args = []) => {
+    // 1. Try via window.YT.Player instance
+    try {
+      if (ytPlayerRef.current && typeof ytPlayerRef.current[func] === 'function') {
+        ytPlayerRef.current[func](...(Array.isArray(args) ? args : [args]));
+      }
+    } catch (e) {
+      // Fallback
+    }
+
+    // 2. Try via postMessage
     try {
       if (ytIframeRef.current && ytIframeRef.current.contentWindow) {
         ytIframeRef.current.contentWindow.postMessage(
@@ -92,48 +105,129 @@ export function FloatingMusicPlayer() {
     }
   };
 
-  // Autoplay on mount & on first user gesture anywhere on the web page
-  useEffect(() => {
-    let active = true;
+  // Dedicated unmute and play function (essential for iOS Safari and Android Chrome)
+  const unmuteAndPlay = () => {
+    setIsPlaying(true);
+    setIsMuted(false);
 
-    const startPlaying = () => {
-      if (!active) return;
-      if (currentTrack?.source === 'audio' && audioRef.current) {
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch(() => {});
-      } else if (currentTrack?.source === 'youtube') {
-        sendYtCommand('playVideo');
-        setIsPlaying(true);
+    if (currentTrack?.source === 'audio' && audioRef.current) {
+      audioRef.current.muted = false;
+      audioRef.current.volume = (volume || 50) / 100;
+      audioRef.current.play().catch(() => {});
+    } else if (currentTrack?.source === 'youtube') {
+      sendYtCommand('unMute');
+      sendYtCommand('setVolume', [volume || 50]);
+      sendYtCommand('playVideo');
+    }
+  };
+
+  // Load YouTube IFrame API script once
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!window.YT) {
+      const scriptId = 'fp-yt-iframe-api';
+      if (!document.getElementById(scriptId)) {
+        const tag = document.createElement('script');
+        tag.id = scriptId;
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScript = document.getElementsByTagName('script')[0];
+        if (firstScript && firstScript.parentNode) {
+          firstScript.parentNode.insertBefore(tag, firstScript);
+        } else {
+          document.head.appendChild(tag);
+        }
+      }
+    }
+  }, []);
+
+  // Initialize YT.Player on iframe to have direct control
+  const ytId = currentTrack?.source === 'youtube' ? extractYouTubeId(currentTrack?.url) : '';
+
+  useEffect(() => {
+    if (!ytId || currentTrack?.source !== 'youtube') return;
+
+    let pollTimer = null;
+    const bindPlayer = () => {
+      if (window.YT && window.YT.Player && ytIframeRef.current) {
+        try {
+          if (!ytPlayerRef.current) {
+            ytPlayerRef.current = new window.YT.Player(ytIframeRef.current, {
+              events: {
+                onReady: (event) => {
+                  try {
+                    event.target.unMute();
+                    event.target.setVolume(volume || 50);
+                    if (isPlaying) {
+                      event.target.playVideo();
+                    }
+                  } catch (err) {}
+                },
+                onStateChange: (event) => {
+                  if (event.data === window.YT.PlayerState.PLAYING) {
+                    setIsPlaying(true);
+                  } else if (event.data === window.YT.PlayerState.PAUSED) {
+                    setIsPlaying(false);
+                  }
+                }
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('YT.Player binding error:', err);
+        }
       }
     };
 
-    startPlaying();
-    const timer = setTimeout(startPlaying, 600);
+    if (window.YT && window.YT.Player) {
+      bindPlayer();
+    } else {
+      pollTimer = setInterval(() => {
+        if (window.YT && window.YT.Player) {
+          bindPlayer();
+          clearInterval(pollTimer);
+        }
+      }, 500);
+    }
 
-    const handleFirstGesture = () => {
-      startPlaying();
-      setIsPlaying(true);
-      window.removeEventListener('pointerdown', handleFirstGesture);
-      window.removeEventListener('touchstart', handleFirstGesture);
-      window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('scroll', handleFirstGesture);
+    return () => {
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [ytId, volume, isPlaying, currentTrack?.source]);
+
+  // Autoplay on mount & on first user gesture anywhere on mobile/desktop
+  useEffect(() => {
+    let active = true;
+
+    const executePlay = () => {
+      if (!active) return;
+      unmuteAndPlay();
     };
 
-    window.addEventListener('pointerdown', handleFirstGesture, { once: true, passive: true });
-    window.addEventListener('touchstart', handleFirstGesture, { once: true, passive: true });
-    window.addEventListener('click', handleFirstGesture, { once: true, passive: true });
-    window.addEventListener('scroll', handleFirstGesture, { once: true, passive: true });
+    // Direct try on load
+    executePlay();
+    const t1 = setTimeout(executePlay, 500);
+    const t2 = setTimeout(executePlay, 1200);
+
+    // Mobile gesture unlock (Safari / Chrome require user touch to unlock audible media)
+    const handleGesture = () => {
+      executePlay();
+      setTimeout(executePlay, 300);
+    };
+
+    const gestureEvents = ['pointerdown', 'touchstart', 'touchend', 'click', 'scroll', 'keydown'];
+    gestureEvents.forEach((evt) => {
+      window.addEventListener(evt, handleGesture, { once: true, passive: true });
+    });
 
     return () => {
       active = false;
-      clearTimeout(timer);
-      window.removeEventListener('pointerdown', handleFirstGesture);
-      window.removeEventListener('touchstart', handleFirstGesture);
-      window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('scroll', handleFirstGesture);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      gestureEvents.forEach((evt) => {
+        window.removeEventListener(evt, handleGesture);
+      });
     };
-  }, [currentTrack?.url, currentTrack?.source]);
+  }, [currentTrack?.url, currentTrack?.source, volume]);
 
   // Handle Play / Pause
   const togglePlay = () => {
@@ -151,6 +245,8 @@ export function FloatingMusicPlayer() {
       }
     } else if (currentTrack.source === 'youtube') {
       if (nextState) {
+        sendYtCommand('unMute');
+        sendYtCommand('setVolume', [volume || 50]);
         sendYtCommand('playVideo');
       } else {
         sendYtCommand('pauseVideo');
@@ -309,7 +405,6 @@ export function FloatingMusicPlayer() {
     return null;
   }
 
-  const ytId = currentTrack?.source === 'youtube' ? extractYouTubeId(currentTrack?.url) : '';
   const spotifyEmbedUrl = currentTrack?.source === 'spotify' ? extractSpotifyEmbedUrl(currentTrack?.url) : '';
 
   return (
@@ -347,20 +442,25 @@ export function FloatingMusicPlayer() {
         />
       )}
 
-      {/* 2. YouTube IFrame Player (Off-screen with enablejsapi=1, static URL to prevent reload on play/pause) */}
+      {/* 2. YouTube IFrame Player (Off-screen with enablejsapi=1 & origin for reliable mobile API control) */}
       {currentTrack?.source === 'youtube' && ytId && (
         <div className="hidden-yt-player-container" aria-hidden="true">
           <iframe
             ref={ytIframeRef}
+            id="fp-yt-bg-player"
             key={ytId}
             title="FP TCG Background Music"
-            src={`https://www.youtube-nocookie.com/embed/${ytId}?enablejsapi=1&autoplay=1&loop=1&playlist=${ytId}&playsinline=1&controls=0&disablekb=1&fs=0&rel=0`}
-            allow="autoplay; encrypted-media; picture-in-picture"
+            src={`https://www.youtube-nocookie.com/embed/${ytId}?enablejsapi=1&autoplay=1&loop=1&playlist=${ytId}&playsinline=1&controls=0&disablekb=1&fs=0&rel=0&origin=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
+            allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
             tabIndex="-1"
             onLoad={() => {
-              if (isPlaying) {
-                setTimeout(() => sendYtCommand('playVideo'), 400);
-              }
+              setTimeout(() => {
+                sendYtCommand('unMute');
+                sendYtCommand('setVolume', [volume || 50]);
+                if (isPlaying) {
+                  sendYtCommand('playVideo');
+                }
+              }, 400);
             }}
           />
         </div>
@@ -572,12 +672,18 @@ export function FloatingMusicPlayer() {
       {!isExpanded && (
         <div 
           className={`music-pill-trigger ${isPlaying ? 'is-playing' : ''}`}
-          onClick={() => setIsExpanded(true)}
+          onClick={() => {
+            unmuteAndPlay();
+            setIsExpanded(true);
+          }}
           role="button"
           tabIndex={0}
           title="คลิกเพื่อเปิดเครื่องเล่นเพลงเต็ม"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') setIsExpanded(true);
+            if (e.key === 'Enter' || e.key === ' ') {
+              unmuteAndPlay();
+              setIsExpanded(true);
+            }
           }}
         >
           {/* Spinning Vinyl Disc (Compact) */}
