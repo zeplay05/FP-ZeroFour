@@ -100,9 +100,9 @@ export function AdminMusicTab() {
     }
 
     const singleTrack = {
-      id: 'track-1',
+      id: `track-${Date.now()}`,
       title: finalMeta?.title || (detectedSource === 'youtube' ? 'YouTube Music Track' : 'Audio Track'),
-      artist: finalMeta?.artist || 'FP Zerofour',
+      artist: finalMeta?.artist || 'FP TCG',
       source: finalMeta?.source || detectedSource,
       url: cleanUrl || initialTrack.url,
       thumbnail: finalMeta?.thumbnail || ''
@@ -110,7 +110,9 @@ export function AdminMusicTab() {
 
     const updatedSettings = {
       ...settings,
-      activeTrackId: 'track-1',
+      enabled: true,
+      autoplay: true,
+      activeTrackId: singleTrack.id,
       track: singleTrack,
       playlist: [singleTrack]
     };

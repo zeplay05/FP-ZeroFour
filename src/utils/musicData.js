@@ -5,38 +5,30 @@
 
 export const DEFAULT_MUSIC_SETTINGS = {
   enabled: true,
-  autoplay: false, // Default false to respect browser autoplay policies
-  defaultVolume: 40, // 0 - 100
-  activeTrackId: 'track-1',
+  autoplay: true, // Default true to play on load / first touch
+  defaultVolume: 45, // 0 - 100
+  activeTrackId: 'track-fp-tcg',
+  track: {
+    id: 'track-fp-tcg',
+    title: 'FP TCG - Cyber Gaming Theme',
+    artist: 'FP TCG Sound',
+    source: 'youtube',
+    url: 'https://www.youtube.com/watch?v=4xDzrJKXOOY', // Neon Synthwave Gaming Beat (Not Lofi)
+    thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=150&q=80'
+  },
   playlist: [
     {
-      id: 'track-1',
-      title: 'Chill Lofi Study / Relax Beats',
-      artist: 'Lofi Girl / FP Chill Lounge',
+      id: 'track-fp-tcg',
+      title: 'FP TCG - Cyber Gaming Theme',
+      artist: 'FP TCG Sound',
       source: 'youtube',
-      url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', // Lofi Beats YouTube
-      thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=150&q=80'
-    },
-    {
-      id: 'track-2',
-      title: 'Neon Cyberpunk / Synthwave Night',
-      artist: 'FP Zerofour Radio',
-      source: 'youtube',
-      url: 'https://www.youtube.com/watch?v=4xDzrJKXOOY', // Synthwave Chill
-      thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=150&q=80'
-    },
-    {
-      id: 'track-3',
-      title: 'Peaceful Ambient Lo-Fi Chill',
-      artist: 'FP Zen Space',
-      source: 'audio',
-      url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3', // Direct chill MP3
-      thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&q=80'
+      url: 'https://www.youtube.com/watch?v=4xDzrJKXOOY',
+      thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=150&q=80'
     }
   ]
 };
 
-const STORAGE_KEY = 'fp_zerofour_music_settings_v1';
+const STORAGE_KEY = 'fp_zerofour_music_settings_v3';
 
 /**
  * Detect track source type from URL
@@ -62,8 +54,18 @@ export function detectSourceType(url = '') {
  */
 export function extractYouTubeId(url = '') {
   if (!url) return '';
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i);
-  return match ? match[1] : '';
+  const clean = url.trim();
+  // Support youtu.be, watch?v=, embed/, shorts/, live/, m.youtube.com, etc.
+  const match = clean.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/i);
+  if (match) return match[1];
+
+  try {
+    const parsed = new URL(clean);
+    const v = parsed.searchParams.get('v');
+    if (v && v.length === 11) return v;
+  } catch {}
+
+  return '';
 }
 
 /**
@@ -91,15 +93,40 @@ export function extractSpotifyEmbedUrl(url = '') {
  */
 export function loadMusicSettings() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    // Purge any old v1 or v2 storage that had lofi
+    try {
+      const v1 = localStorage.getItem('fp_zerofour_music_settings_v1');
+      if (v1 && (v1.includes('jfKfPfyJRdk') || v1.toLowerCase().includes('lofi'))) {
+        localStorage.removeItem('fp_zerofour_music_settings_v1');
+      }
+      const v2 = localStorage.getItem('fp_zerofour_music_settings_v2');
+      if (v2 && (v2.includes('jfKfPfyJRdk') || v2.toLowerCase().includes('lofi'))) {
+        localStorage.removeItem('fp_zerofour_music_settings_v2');
+      }
+    } catch {}
+
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('fp_zerofour_music_settings_v2');
     if (raw) {
       const parsed = JSON.parse(raw);
+      // If parsed contains old Lofi Girl track, purge it completely
+      if (
+        parsed.track?.url?.includes('jfKfPfyJRdk') ||
+        parsed.playlist?.some(t => t.url?.includes('jfKfPfyJRdk')) ||
+        parsed.track?.title?.toLowerCase().includes('lofi')
+      ) {
+        localStorage.removeItem(STORAGE_KEY);
+        return DEFAULT_MUSIC_SETTINGS;
+      }
+
+      const activeTrack = parsed.track || (Array.isArray(parsed.playlist) && parsed.playlist[0]) || DEFAULT_MUSIC_SETTINGS.track;
+
       return {
         ...DEFAULT_MUSIC_SETTINGS,
         ...parsed,
+        track: activeTrack,
         playlist: Array.isArray(parsed.playlist) && parsed.playlist.length > 0 
           ? parsed.playlist 
-          : DEFAULT_MUSIC_SETTINGS.playlist
+          : [activeTrack]
       };
     }
   } catch (err) {

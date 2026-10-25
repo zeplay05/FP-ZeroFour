@@ -25,9 +25,9 @@ import {
 
 export function FloatingMusicPlayer() {
   const [settings, setSettings] = useState(loadMusicSettings);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true); // Autoplay by default
   const [isExpanded, setIsExpanded] = useState(false);
-  const [volume, setVolume] = useState(() => settings.defaultVolume ?? 40);
+  const [volume, setVolume] = useState(() => settings.defaultVolume ?? 45);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -42,9 +42,8 @@ export function FloatingMusicPlayer() {
     const handleSettingsUpdated = (e) => {
       if (e.detail) {
         setSettings(e.detail);
-        // Find index of active track
-        const idx = e.detail.playlist.findIndex(t => t.id === e.detail.activeTrackId);
-        if (idx !== -1) setCurrentTrackIndex(idx);
+        const idx = e.detail.playlist?.findIndex(t => t.id === e.detail.activeTrackId);
+        if (idx !== -1 && typeof idx === 'number') setCurrentTrackIndex(idx);
       } else {
         const fresh = loadMusicSettings();
         setSettings(fresh);
@@ -53,7 +52,7 @@ export function FloatingMusicPlayer() {
 
     window.addEventListener('fp_music_settings_updated', handleSettingsUpdated);
     window.addEventListener('storage', (e) => {
-      if (e.key === 'fp_zerofour_music_settings_v1') {
+      if (e.key === 'fp_zerofour_music_settings_v3' || e.key === 'fp_zerofour_music_settings_v1') {
         setSettings(loadMusicSettings());
       }
     });
@@ -76,7 +75,8 @@ export function FloatingMusicPlayer() {
   const playlist = (settings.playlist && settings.playlist.length > 0)
     ? settings.playlist 
     : (settings.track ? [settings.track] : []);
-  const currentTrack = playlist[currentTrackIndex] || settings.track || playlist[0] || null;
+  // Always prioritize single track configured by admin if available
+  const currentTrack = settings.track || playlist[currentTrackIndex] || playlist[0] || null;
 
   // Send command to YouTube iframe via postMessage
   const sendYtCommand = (func, args = []) => {
@@ -91,6 +91,49 @@ export function FloatingMusicPlayer() {
       console.warn('YouTube postMessage error:', e);
     }
   };
+
+  // Autoplay on mount & on first user gesture anywhere on the web page
+  useEffect(() => {
+    let active = true;
+
+    const startPlaying = () => {
+      if (!active) return;
+      if (currentTrack?.source === 'audio' && audioRef.current) {
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {});
+      } else if (currentTrack?.source === 'youtube') {
+        sendYtCommand('playVideo');
+        setIsPlaying(true);
+      }
+    };
+
+    startPlaying();
+    const timer = setTimeout(startPlaying, 600);
+
+    const handleFirstGesture = () => {
+      startPlaying();
+      setIsPlaying(true);
+      window.removeEventListener('pointerdown', handleFirstGesture);
+      window.removeEventListener('touchstart', handleFirstGesture);
+      window.removeEventListener('click', handleFirstGesture);
+      window.removeEventListener('scroll', handleFirstGesture);
+    };
+
+    window.addEventListener('pointerdown', handleFirstGesture, { once: true, passive: true });
+    window.addEventListener('touchstart', handleFirstGesture, { once: true, passive: true });
+    window.addEventListener('click', handleFirstGesture, { once: true, passive: true });
+    window.addEventListener('scroll', handleFirstGesture, { once: true, passive: true });
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      window.removeEventListener('pointerdown', handleFirstGesture);
+      window.removeEventListener('touchstart', handleFirstGesture);
+      window.removeEventListener('click', handleFirstGesture);
+      window.removeEventListener('scroll', handleFirstGesture);
+    };
+  }, [currentTrack?.url, currentTrack?.source]);
 
   // Handle Play / Pause
   const togglePlay = () => {
@@ -310,8 +353,8 @@ export function FloatingMusicPlayer() {
           <iframe
             ref={ytIframeRef}
             key={ytId}
-            title="FP Zerofour Background Music YouTube"
-            src={`https://www.youtube-nocookie.com/embed/${ytId}?enablejsapi=1&loop=1&playlist=${ytId}&playsinline=1&controls=0&disablekb=1&fs=0&rel=0`}
+            title="FP TCG Background Music"
+            src={`https://www.youtube-nocookie.com/embed/${ytId}?enablejsapi=1&autoplay=1&loop=1&playlist=${ytId}&playsinline=1&controls=0&disablekb=1&fs=0&rel=0`}
             allow="autoplay; encrypted-media; picture-in-picture"
             tabIndex="-1"
             onLoad={() => {
@@ -537,21 +580,18 @@ export function FloatingMusicPlayer() {
             if (e.key === 'Enter' || e.key === ' ') setIsExpanded(true);
           }}
         >
-          {/* Spinning Vinyl Disc */}
+          {/* Spinning Vinyl Disc (Compact) */}
           <div className={`mini-disc-wrap ${isPlaying ? 'spinning' : ''}`}>
-            <Disc size={22} className="mini-disc-icon" />
+            <Disc size={13} className="mini-disc-icon" />
             {isPlaying && <span className="mini-glow-pulse" />}
           </div>
 
-          {/* Track Text & Equalizer */}
+          {/* Single-line Track Title */}
           <div className="mini-info-wrap">
             <span className="mini-title-text">
               {currentTrack?.title 
-                ? (currentTrack.title.length > 16 ? currentTrack.title.slice(0, 16) + '...' : currentTrack.title)
-                : 'FP Music'}
-            </span>
-            <span className="mini-status-text">
-              {isPlaying ? 'กำลังเล่น 🎵' : 'แตะเพื่อเปิดเพลง'}
+                ? (currentTrack.title.length > 12 ? currentTrack.title.slice(0, 12) + '...' : currentTrack.title)
+                : 'FP TCG'}
             </span>
           </div>
 
@@ -565,7 +605,7 @@ export function FloatingMusicPlayer() {
             }}
             title={isPlaying ? 'หยุดเล่น' : 'เล่นเพลง'}
           >
-            {isPlaying ? <Pause size={14} /> : <Play size={14} className="play-icon-offset-sm" />}
+            {isPlaying ? <Pause size={10} /> : <Play size={10} className="play-icon-offset-sm" />}
           </button>
 
           {/* Direct Volume Toggle */}
@@ -578,13 +618,8 @@ export function FloatingMusicPlayer() {
             }}
             title={isMuted ? 'เปิดเสียง' : 'ปิดเสียง'}
           >
-            {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+            {isMuted ? <VolumeX size={10} /> : <Volume2 size={10} />}
           </button>
-
-          {/* Expand Arrow */}
-          <div className="mini-expand-arrow">
-            <ChevronUp size={15} />
-          </div>
         </div>
       )}
     </aside>
