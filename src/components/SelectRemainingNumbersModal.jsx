@@ -8,6 +8,8 @@ import {
   Search,
   ExternalLink,
   ShoppingBag,
+  CheckCircle2,
+  Copy,
 } from 'lucide-react';
 import { getBoardTypeInfo } from '../utils/lotteryData';
 
@@ -21,6 +23,7 @@ export function SelectRemainingNumbersModal({
   const [customerName, setCustomerName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   // Seller Facebook Page or Messenger link (Admin configured)
   const sellerFbUrl = useMemo(() => {
@@ -37,6 +40,7 @@ export function SelectRemainingNumbersModal({
       setSelectedNumbers([]);
       setSearchQuery('');
       setCopied(false);
+      setShowSuccessModal(false);
     }
   }, [isOpen]);
 
@@ -117,7 +121,7 @@ export function SelectRemainingNumbersModal({
     }
     const msg = generateMessageText();
     
-    // Auto copy message into customer's clipboard immediately (ไม่ต้องก๊อปเอง)
+    // Auto copy message into customer's clipboard immediately
     try {
       navigator.clipboard.writeText(msg);
     } catch (e) {
@@ -142,6 +146,35 @@ export function SelectRemainingNumbersModal({
 
     // Open chat in new tab
     window.open(finalUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  // Manual copy button inside modal
+  const handleManualCopy = async () => {
+    const msg = generateMessageText();
+    try {
+      await navigator.clipboard.writeText(msg);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (e) {
+      console.warn('Clipboard write failed', e);
+    }
+  };
+
+  // Confirm booking & show confirmation popup
+  const handleConfirmBooking = () => {
+    if (selectedNumbers.length === 0) {
+      alert('กรุณาเลือกเบอร์ที่ต้องการก่อนครับ');
+      return;
+    }
+    const msg = generateMessageText();
+    try {
+      navigator.clipboard.writeText(msg);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (e) {
+      console.warn('Clipboard write failed', e);
+    }
+    setShowSuccessModal(true);
   };
 
   return (
@@ -178,39 +211,56 @@ export function SelectRemainingNumbersModal({
           </button>
         </div>
 
-        {/* Quick Toolbar (Search & Clear) */}
+        {/* Quick Toolbar (Random Pick, Search, Clear) */}
         <div className="select-modal-toolbar">
-          <div className="select-search-wrap">
-            <Search size={15} className="search-icon-inside" />
-            <input 
-              type="text" 
-              placeholder="ค้นหาเลขที่ต้องการ..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="select-search-field"
-            />
-            {searchQuery && (
+          <div className="quick-random-group">
+            <span className="quick-label"><Sparkles size={12} className="text-amber-400" /> สุ่มเบอร์:</span>
+            {[1, 2, 3, 4].map((n) => (
+              <button 
+                key={n}
+                type="button" 
+                className="btn-quick-chip"
+                onClick={() => handleRandomPick(n)}
+                title={`สุ่ม ${n} เบอร์`}
+              >
+                {n} เบอร์
+              </button>
+            ))}
+          </div>
+
+          <div className="select-toolbar-actions">
+            <div className="select-search-wrap">
+              <Search size={14} className="search-icon-inside" />
+              <input 
+                type="text" 
+                placeholder="ค้นหาเลข..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="select-search-field"
+              />
+              {searchQuery && (
+                <button 
+                  type="button" 
+                  className="select-search-clear-btn"
+                  onClick={() => setSearchQuery('')}
+                  title="ล้างการค้นหา"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {selectedNumbers.length > 0 && (
               <button 
                 type="button" 
-                className="select-search-clear-btn"
-                onClick={() => setSearchQuery('')}
-                title="ล้างการค้นหา"
+                className="btn-quick-chip chip-clear"
+                onClick={handleClearSelection}
+                title="ล้างที่เลือกทั้งหมด"
               >
-                <X size={13} />
+                <RotateCcw size={12} /> ล้าง ({selectedNumbers.length})
               </button>
             )}
           </div>
-
-          {selectedNumbers.length > 0 && (
-            <button 
-              type="button" 
-              className="btn-quick-chip chip-clear"
-              onClick={handleClearSelection}
-              title="ล้างที่เลือกทั้งหมด"
-            >
-              <RotateCcw size={13} /> ล้าง ({selectedNumbers.length})
-            </button>
-          )}
         </div>
 
         {/* Scrollable Numbers Grid (ONLY Available Remaining Numbers) */}
@@ -271,6 +321,12 @@ export function SelectRemainingNumbersModal({
                   <span className="text-muted-italics">แตะเลือกเลขที่ต้องการจากกระดานด้านบน</span>
                 )}
               </div>
+              {/* Dynamic discount hint */}
+              {nextDiscountHint > 0 && count > 0 && (
+                <div className="next-discount-tip animate-fade-in">
+                  💡 เลือกอีก <strong>{nextDiscountHint}</strong> เบอร์ รับส่วนลดเพิ่มเป็น <strong>{discount + typeInfo.discountPerStep}.-</strong>
+                </div>
+              )}
             </div>
 
             <div className="summary-right">
@@ -295,27 +351,105 @@ export function SelectRemainingNumbersModal({
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons: ยืนยันจอง */}
           <div className="select-actions-row">
             <button
               type="button"
-              className="btn-action-send-fb"
-              onClick={handleOpenMessenger}
+              className="btn-action-confirm-booking"
+              onClick={handleConfirmBooking}
               disabled={selectedNumbers.length === 0}
             >
-              <MessageCircle size={18} />
-              <span>ส่งเข้าแชทเฟส (Messenger)</span>
-              <ExternalLink size={14} className="send-ext-icon" />
+              <CheckCircle2 size={19} />
+              <span>ยืนยันจอง {count > 0 ? `(${count} เบอร์)` : ''}</span>
             </button>
           </div>
 
-          {copied && (
-            <div className="copy-hint-pill animate-fade-in">
-              ✨ คัดลอกข้อความให้อัตโนมัติแล้ว! สามารถกด "วาง (Paste)" ในแชทได้ทันที
-            </div>
-          )}
-
         </div>
+
+        {/* Booking Success Confirmation Dialog */}
+        {showSuccessModal && (
+          <div className="booking-success-backdrop animate-fade-in" onClick={() => setShowSuccessModal(false)}>
+            <div className="booking-success-box animate-scale-up" onClick={(e) => e.stopPropagation()}>
+              
+              <div className="booking-success-badge-icon">
+                <CheckCircle2 size={42} className="text-success-neon" />
+              </div>
+
+              <h3 className="booking-success-title">เลือกเลขสำเร็จเรียบร้อย! 🎉</h3>
+              <p className="booking-success-desc">
+                ระบบได้คัดลอกข้อความสรุปการจองให้แล้ว สามารถนำข้อความไปวางส่งหาแอดมินในแชทได้ทันทีครับ
+              </p>
+
+              {/* Order summary card */}
+              <div className="booking-summary-card">
+                <div className="summary-card-row">
+                  <span className="summary-card-label">รายการ:</span>
+                  <span className="summary-card-val text-white font-semibold">{round?.title || 'รางวัลเลขท้าย'}</span>
+                </div>
+                <div className="summary-card-row">
+                  <span className="summary-card-label">เบอร์ที่จอง ({count} เบอร์):</span>
+                  <span className="summary-card-val highlight-nums">{selectedNumbers.join(', ')}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="summary-card-row">
+                    <span className="summary-card-label">ส่วนลด:</span>
+                    <span className="summary-card-val text-emerald-400 font-bold">-{discount} บาท</span>
+                  </div>
+                )}
+                <div className="summary-card-row total-highlight-row">
+                  <span className="summary-card-label">ยอดที่ต้องชำระ:</span>
+                  <span className="summary-card-val total-amt">{finalTotal.toLocaleString()} บาท</span>
+                </div>
+                {customerName.trim() && (
+                  <div className="summary-card-row">
+                    <span className="summary-card-label">ชื่อผู้จอง:</span>
+                    <span className="summary-card-val text-slate-300">{customerName.trim()}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div className="booking-success-actions">
+                <button
+                  type="button"
+                  className="btn-modal-chat-admin"
+                  onClick={handleOpenMessenger}
+                >
+                  <MessageCircle size={18} />
+                  <span>แชทหาแอดมิน (Messenger)</span>
+                  <ExternalLink size={14} className="send-ext-icon" />
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-modal-copy-again"
+                  onClick={handleManualCopy}
+                >
+                  {copied ? (
+                    <>
+                      <Check size={16} />
+                      <span>คัดลอกข้อความสำเร็จแล้ว!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={16} />
+                      <span>คัดลอกข้อความอีกครั้ง</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-modal-close-simple"
+                  onClick={() => setShowSuccessModal(false)}
+                >
+                  กลับไปที่กระดาน
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
