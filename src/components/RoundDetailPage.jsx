@@ -6,7 +6,8 @@ import {
   Maximize2, 
   X, 
   Search, 
-  MessageCircle
+  MessageCircle,
+  FileText
 } from 'lucide-react';
 import { formatThaiDate, getBoardTypeInfo } from '../utils/lotteryData';
 import { SelectRemainingNumbersModal } from './SelectRemainingNumbersModal';
@@ -117,6 +118,17 @@ export function RoundDetailPage({
               </div>
             )}
           </div>
+
+          {/* Board Rules & Description Card */}
+          {round.description && (
+            <div className="round-detail-description-card animate-fade-in">
+              <div className="desc-card-top-header">
+                <FileText size={16} className="desc-icon-purple" />
+                <span className="desc-title-text">รายละเอียดด้านใน / กติกา</span>
+              </div>
+              <p className="desc-text-body">{round.description}</p>
+            </div>
+          )}
 
           {/* 10x10 Grid (00 - 99) */}
           <div className="grid-10x10-box">

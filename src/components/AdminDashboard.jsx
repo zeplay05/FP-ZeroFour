@@ -35,7 +35,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Upload,
-  Database
+  Database,
+  FileText
 } from 'lucide-react';
 import { AdminMusicTab } from './AdminMusicTab';
 import { getBoardTypeInfo, BOARD_TYPES } from '../utils/lotteryData';
@@ -1421,6 +1422,9 @@ export function AdminDashboard({
                     </div>
                     <div className="chip-info">
                       <h4 className="chip-title">{board.title}</h4>
+                      {board.description && (
+                        <p className="chip-desc-line">{board.description}</p>
+                      )}
                       <div className="chip-meta">
                         <span className="chip-price">{board.pricePerNumber || 50}฿/เบอร์</span>
                         <span className={`chip-status-tag ${board.status}`}>
@@ -1536,6 +1540,34 @@ export function AdminDashboard({
                         </span>
                       )}
                     </div>
+                  </div>
+
+                  {/* Board Rules & Description Card */}
+                  <div className="admin-board-desc-card animate-fade-in">
+                    <div className="desc-card-header">
+                      <div className="desc-header-left">
+                        <FileText size={15} className="desc-icon-cyan" />
+                        <span className="desc-label">รายละเอียดด้านใน / กติกา:</span>
+                      </div>
+                      {!isCurrentBoardDrawn && (
+                        <button
+                          type="button"
+                          className="btn-edit-desc-mini"
+                          onClick={() => openEditBoardModal(selectedBoard)}
+                          title="แก้ไขรายละเอียดและกติกา"
+                        >
+                          <Edit3 size={12} />
+                          <span>แก้ไขกติกา</span>
+                        </button>
+                      )}
+                    </div>
+                    {selectedBoard.description ? (
+                      <p className="desc-card-text">{selectedBoard.description}</p>
+                    ) : (
+                      <p className="desc-card-empty-text">
+                        ยังไม่ได้ระบุรายละเอียดด้านใน / กติกา (กดปุ่ม "แก้ไขข้อมูลกระดาน" หรือ "แก้ไขกติกา" เพื่อระบุรายละเอียดรางวัล สภาพการ์ด หรือกติกา)
+                      </p>
+                    )}
                   </div>
 
                   {/* Grid: Left = Form/Notice, Right = Visual 00-99 Grid */}

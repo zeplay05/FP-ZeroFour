@@ -56,6 +56,7 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
   const [pricePerNumber, setPricePerNumber] = useState(50);
   const [theme, setTheme] = useState('gold');
   const [boardType, setBoardType] = useState('duck');
+  const [description, setDescription] = useState('');
 
   if (!isOpen) return null;
 
@@ -87,6 +88,7 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
       pricePerNumber: Number(pricePerNumber) || 50,
       boardType: boardType,
       theme: theme,
+      description: description.trim(),
       status: 'open',
       createdAt: Date.now(), // Newest timestamp (ล่าสุดอยู่อันแรกเสมอ)
       sellerPhone: '089-123-4567',
@@ -245,6 +247,18 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
                 <option value="emerald">🍀 เขียวมรกต</option>
               </select>
             </div>
+          </div>
+
+          {/* Description & Rules */}
+          <div className="form-group">
+            <label className="form-label">รายละเอียดด้านใน / กติกา:</label>
+            <textarea
+              className="form-input textarea"
+              rows="3"
+              placeholder="รายละเอียดรางวัล สภาพการ์ด การจัดส่ง และกติกาการออกรางวัล..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
 
           <div className="modal-actions">

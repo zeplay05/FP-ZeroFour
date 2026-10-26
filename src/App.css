@@ -12351,8 +12351,207 @@ html, body {
     font-size: 16px !important;
   }
 }
+/* =========================================================================
+   BOARD RULES & DESCRIPTION STYLES (กติกาและรายละเอียดกระดาน หน้าบ้าน-หลังบ้าน)
+   ========================================================================= */
 
+/* 1. Frontend: Round Detail Page Rules & Description Card */
+.round-detail-description-card {
+  width: 100%;
+  max-width: 960px;
+  margin: 18px auto 20px auto;
+  background: rgba(18, 14, 38, 0.85);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
 
+.round-detail-description-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #a855f7 0%, #06b6d4 100%);
+  border-radius: 4px 0 0 4px;
+}
 
+.round-detail-description-card:hover {
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 12px 36px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
 
+.desc-card-top-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
 
+.desc-icon-purple {
+  color: #c084fc;
+}
+
+.desc-title-text {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #e9d5ff;
+  letter-spacing: 0.3px;
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.3);
+}
+
+.desc-text-body {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* 2. Backend: Admin Dashboard Active Board Description Card */
+.admin-board-desc-card {
+  width: 100%;
+  margin-bottom: 20px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.admin-board-desc-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: #06b6d4;
+  border-radius: 3px 0 0 3px;
+}
+
+.desc-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.desc-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desc-icon-cyan {
+  color: #22d3ee;
+}
+
+.desc-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #67e8f9;
+}
+
+.btn-edit-desc-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-edit-desc-mini:hover {
+  background: rgba(6, 182, 212, 0.2);
+  border-color: rgba(6, 182, 212, 0.4);
+  color: #ffffff;
+}
+
+.desc-card-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.desc-card-empty-text {
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-style: italic;
+  margin: 0;
+}
+
+/* 3. Admin Table View & Card Views */
+.table-item-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.chip-desc-line {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin: 3px 0 4px 0;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 4. Frontend Home Page Cards */
+.open-board-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin: 6px 0 12px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.board-card-desc-preview {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #94a3b8;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}

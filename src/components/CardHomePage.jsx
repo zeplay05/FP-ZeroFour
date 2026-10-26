@@ -313,6 +313,9 @@ export function CardHomePage({
                 {/* Bottom Information Bar */}
                 <div className="board-card-info-bar">
                   <span className="board-card-title">{round.title}</span>
+                  {round.description && (
+                    <p className="board-card-desc-preview">{round.description}</p>
+                  )}
                 </div>
 
               </div>
