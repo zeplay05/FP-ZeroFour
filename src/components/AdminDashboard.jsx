@@ -1158,7 +1158,6 @@ export function AdminDashboard({
                     <tr>
                       <th style={{ width: '70px', textAlign: 'center' }}>รูปปก</th>
                       <th>ชื่อกระดาน / รายละเอียด</th>
-                      <th>ประเภทกระดาน</th>
                       <th>ราคา/เบอร์</th>
                       <th>สถานะ</th>
                       <th>เบอร์ว่าง / ความคืบหน้า</th>
@@ -1215,15 +1214,6 @@ export function AdminDashboard({
                                 {board.description && (
                                   <p className="table-item-desc">{board.description}</p>
                                 )}
-                              </div>
-                            </td>
-
-                            {/* 3. Board Type & Promo */}
-                            <td className="td-type">
-                              <div className="table-type-wrap">
-                                <span className="chip-type-tag">
-                                  {typeInfo.promoBadge}
-                                </span>
                               </div>
                             </td>
 
@@ -1424,9 +1414,6 @@ export function AdminDashboard({
                         <span className="chip-price">{board.pricePerNumber || 50}฿/เบอร์</span>
                         <span className={`chip-status-tag ${board.status}`}>
                           {board.status === 'open' ? 'เปิดจอง' : board.status === 'drawn' ? 'ออกผลแล้ว' : 'ปิดจอง'}
-                        </span>
-                        <span className="chip-type-tag">
-                          {getBoardTypeInfo(board.boardType).promoBadge}
                         </span>
                       </div>
                       <div className="chip-remain-row">
@@ -2260,63 +2247,6 @@ export function AdminDashboard({
 
             <form onSubmit={handleSaveBoard} className="admin-modal-form">
               
-              {/* Board Type & Discount Promotion Options */}
-              <div className="form-group">
-                <label className="form-lbl">ประเภทกระดาน (เลือกโปรโมชั่นส่วนลด) <span className="req">*</span></label>
-                <div className="board-type-radio-options">
-                  <label className={`board-type-opt ${boardForm.boardType === 'duck' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="boardType"
-                      value="duck"
-                      checked={boardForm.boardType === 'duck'}
-                      onChange={(e) => setBoardForm(prev => ({ ...prev, boardType: e.target.value }))}
-                    />
-                    <div className="board-type-info-wrap">
-                      <div className="type-head">
-                        <span className="type-icon">🦆</span>
-                        <span className="type-title">1. วิ่งเป็ด</span>
-                      </div>
-                      <span className="type-badge-pill">3 เบอร์ ลด 10</span>
-                    </div>
-                  </label>
-
-                  <label className={`board-type-opt ${boardForm.boardType === 'wheel' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="boardType"
-                      value="wheel"
-                      checked={boardForm.boardType === 'wheel'}
-                      onChange={(e) => setBoardForm(prev => ({ ...prev, boardType: e.target.value }))}
-                    />
-                    <div className="board-type-info-wrap">
-                      <div className="type-head">
-                        <span className="type-icon">🎡</span>
-                        <span className="type-title">2. วงล้อ</span>
-                      </div>
-                      <span className="type-badge-pill">3 เบอร์ ลด 10</span>
-                    </div>
-                  </label>
-
-                  <label className={`board-type-opt ${boardForm.boardType === 'lotto' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="boardType"
-                      value="lotto"
-                      checked={boardForm.boardType === 'lotto'}
-                      onChange={(e) => setBoardForm(prev => ({ ...prev, boardType: e.target.value }))}
-                    />
-                    <div className="board-type-info-wrap">
-                      <div className="type-head">
-                        <span className="type-icon">🎟️</span>
-                        <span className="type-title">3. ทายหวย</span>
-                      </div>
-                      <span className="type-badge-pill">4 เบอร์ ลด 10 / 8 เบอร์ ลด 20</span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
               <div className="form-group">
                 <label className="form-lbl">ข้อความที่การ์ด / ชื่อกระดาน <span className="req">*</span></label>
                 <input

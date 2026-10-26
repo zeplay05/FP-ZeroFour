@@ -199,9 +199,6 @@ export function CardHomePage({
                       <span className="badge-status-pill open-live">
                         <span className="dot-pulse-mini" /> เปิดให้จอง
                       </span>
-                      <span className="badge-promo-pill">
-                        {getBoardTypeInfo(round.boardType).icon} {getBoardTypeInfo(round.boardType).name} ({getBoardTypeInfo(round.boardType).promoText})
-                      </span>
                       <span className="badge-price-pill highlight-gold">
                         {round.pricePerNumber || 50}.- / เบอร์
                       </span>

@@ -92,7 +92,6 @@ export function RoundDetailPage({
                 ) : (
                   <>
                     เบอร์ละ {round.pricePerNumber}.- · เหลือว่าง {availableNumbers.length} เบอร์
-                    <span className="promo-header-pill">🔥 {getBoardTypeInfo(round.boardType).name} ({getBoardTypeInfo(round.boardType).promoText})</span>
                   </>
                 )}
               </p>

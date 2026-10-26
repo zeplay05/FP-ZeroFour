@@ -181,31 +181,6 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
             </label>
           </div>
 
-          {/* Board Type Options */}
-          <div className="form-group">
-            <label className="form-label">ประเภทกระดาน & โปรโมชั่น:</label>
-            <div className="board-type-radio-options">
-              {BOARD_TYPES.map(bt => (
-                <label
-                  key={bt.id}
-                  className={`board-type-opt ${boardType === bt.id ? 'active' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="modalBoardType"
-                    value={bt.id}
-                    checked={boardType === bt.id}
-                    onChange={(e) => setBoardType(e.target.value)}
-                  />
-                  <div className="board-type-icon">{bt.icon}</div>
-                  <div className="board-type-info-wrap">
-                    <span className="board-type-opt-title">{bt.name}</span>
-                    <span className="board-type-opt-promo">{bt.promoText}</span>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
 
           {/* Price per number */}
           <div className="form-row">
