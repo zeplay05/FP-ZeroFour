@@ -6487,8 +6487,8 @@ body {
 }
 
 .login-badge-circle {
-  width: 70px;
-  height: 70px;
+  width: 78px;
+  height: 78px;
   margin: 0 auto 18px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, rgba(168, 85, 247, 0.4), rgba(79, 70, 229, 0.3));
@@ -6496,12 +6496,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 20px;
-  font-weight: 900;
-  color: #ffffff;
-  letter-spacing: 1px;
+  overflow: hidden;
+  padding: 0;
   box-shadow: 0 0 24px rgba(168, 85, 247, 0.5), inset 0 0 14px rgba(168, 85, 247, 0.4);
+}
+
+.login-badge-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .login-card-title {
@@ -7314,6 +7319,7 @@ body {
 
 .admin-list-table {
   width: 100%;
+  min-width: 680px;
   border-collapse: separate;
   border-spacing: 0;
   text-align: left;
@@ -7638,22 +7644,117 @@ body {
 }
 
 @media (max-width: 768px) {
+  .admin-main-container {
+    padding: 16px 12px 60px;
+  }
   .admin-stats-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
-  .admin-search-box {
-    width: 100%;
-  }
-  .admin-search-filter-wrap {
-    flex-direction: column;
-    align-items: stretch;
+  .admin-kpi-card {
+    padding: 12px 14px;
   }
   .admin-toolbar-row {
     flex-direction: column;
     align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    gap: 10px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .admin-search-filter-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    gap: 10px;
+  }
+  .admin-search-box {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .admin-filter-pills {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+  .filter-pill {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .admin-view-switcher {
-    align-self: flex-start;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 6px;
+    margin-top: 2px;
+    align-self: stretch;
+  }
+  .btn-view-toggle {
+    width: 100%;
+    justify-content: center;
+    padding: 9px 12px;
+    box-sizing: border-box;
+    font-size: 12.5px;
+  }
+  .admin-table-card {
+    border-radius: 14px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .admin-table-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box;
+  }
+  .admin-list-table {
+    min-width: 680px !important;
+    width: 100%;
+  }
+  .admin-seller-fb-bar {
+    padding: 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .seller-fb-bar-left {
+    min-width: 0;
+    width: 100%;
+  }
+  .seller-fb-bar-right {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .seller-fb-input-wrap {
+    width: 100%;
+  }
+  .btn-save-fb-link,
+  .btn-test-fb-link {
+    flex: 1;
+    justify-content: center;
   }
 }
 

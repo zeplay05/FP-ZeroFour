@@ -808,7 +808,7 @@ export function AdminDashboard({
       <div className="admin-login-screen-wrap animate-fade-in">
         <div className="admin-login-card">
           <div className="login-badge-circle">
-            <span>FP</span>
+            <img src="/logo-icon.jpg" alt="FP Zerofour" className="login-badge-logo-img" />
           </div>
           <h2 className="login-card-title">เข้าสู่ระบบหลังบ้าน</h2>
           <p className="login-card-sub">FP Zerofour Admin Portal</p>
