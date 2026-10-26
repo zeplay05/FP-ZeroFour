@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Layers, 
   CreditCard, 
@@ -21,10 +21,78 @@ import {
   Lock,
   KeyRound,
   Music,
-  MessageCircle
+  MessageCircle,
+  Table as TableIcon,
+  LayoutGrid,
+  Search,
+  Filter,
+  CheckCircle,
+  TrendingUp,
+  Package,
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Upload,
+  Database
 } from 'lucide-react';
 import { AdminMusicTab } from './AdminMusicTab';
 import { getBoardTypeInfo, BOARD_TYPES } from '../utils/lotteryData';
+import { 
+  isSupabaseConfigured, 
+  syncRoundsWithSupabase, 
+  syncStoreCardsWithSupabase, 
+  saveSettingToSupabase 
+} from '../utils/supabaseClient';
+
+// Compress and convert selected file to base64 Data URL (optimizes size for localStorage & fast loading)
+function processImageFile(file, maxWidth = 1000, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+      return resolve(null);
+    }
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Helper to calculate page numbers list (max 5 buttons)
+function getPageNumbers(currentPage, totalPages) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, 5];
+  }
+  if (currentPage >= totalPages - 2) {
+    return [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+  return [currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2];
+}
 
 export function AdminDashboard({
   rounds,
@@ -40,10 +108,45 @@ export function AdminDashboard({
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState('boards'); // 'boards' | 'cards'
+  const [activeTab, setActiveTab] = useState('boards'); // 'boards' | 'cards' | 'music'
   
-  // Selected board for booking management (1.1 กระดานที่จะระบุเบอร์ที่จอง)
-  const [selectedBoardId, setSelectedBoardId] = useState(rounds[0]?.id || null);
+  // View mode states: 'table' (List รายการตาราง) | 'cards' (มุมมองการ์ด)
+  const [boardViewMode, setBoardViewMode] = useState('table');
+  const [cardViewMode, setCardViewMode] = useState('table');
+
+  // Selected board for booking management (1.1 กระดานที่จะระบุเบอร์ที่จอง - null เพื่อแสดงเฉพาะตาราง)
+  const [selectedBoardId, setSelectedBoardId] = useState(null);
+
+  // Search & Filter states for Boards
+  const [boardSearchQuery, setBoardSearchQuery] = useState('');
+  const [boardStatusFilter, setBoardStatusFilter] = useState('all'); // 'all' | 'open' | 'closed' | 'drawn'
+
+  // Search & Filter states for Cards
+  const [cardSearchQuery, setCardSearchQuery] = useState('');
+  const [cardStatusFilter, setCardStatusFilter] = useState('all'); // 'all' | 'available' | 'sold'
+
+  // Pagination states
+  const [boardPage, setBoardPage] = useState(1);
+  const [boardPageSize, setBoardPageSize] = useState(8);
+
+  const [cardPage, setCardPage] = useState(1);
+  const [cardPageSize, setCardPageSize] = useState(8);
+
+  const [bookingPage, setBookingPage] = useState(1);
+  const [bookingPageSize, setBookingPageSize] = useState(10);
+
+  // Reset page to 1 when filters or active selection changes
+  useEffect(() => {
+    setBoardPage(1);
+  }, [boardSearchQuery, boardStatusFilter]);
+
+  useEffect(() => {
+    setCardPage(1);
+  }, [cardSearchQuery, cardStatusFilter]);
+
+  useEffect(() => {
+    setBookingPage(1);
+  }, [selectedBoardId]);
 
   // Modal states for Board Create/Edit
   const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
@@ -107,7 +210,38 @@ export function AdminDashboard({
     }
     setSellerFbLink(formatted);
     localStorage.setItem('seller_fb_link', formatted);
+    if (isSupabaseConfigured()) {
+      saveSettingToSupabase('seller_fb_link', formatted).catch(console.error);
+    }
     showNotice('บันทึกลิงก์แชทเฟสบุ๊คสำเร็จเรียบร้อยแล้ว!');
+  };
+
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+
+  const handleManualCloudSync = async () => {
+    if (!isSupabaseConfigured()) {
+      setIsSupabaseModalOpen(true);
+      return;
+    }
+    try {
+      setIsSyncingCloud(true);
+      const [roundsOk, cardsOk, fbOk] = await Promise.all([
+        syncRoundsWithSupabase(rounds),
+        syncStoreCardsWithSupabase(storeCards),
+        saveSettingToSupabase('seller_fb_link', sellerFbLink)
+      ]);
+      if (roundsOk && cardsOk) {
+        showNotice('ซิงค์ข้อมูลกระดานและการ์ดทั้งหมดขึ้น Supabase เรียบร้อยแล้ว!');
+      } else {
+        showNotice('ซิงค์ข้อมูลเรียบร้อย (บางรายการบันทึกแล้ว)');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการซิงค์: ' + err.message);
+    } finally {
+      setIsSyncingCloud(false);
+    }
   };
 
   const [notification, setNotification] = useState('');
@@ -117,8 +251,9 @@ export function AdminDashboard({
     setTimeout(() => setNotification(''), 3500);
   };
 
-  // Find currently selected board
-  const selectedBoard = rounds.find(r => r.id === selectedBoardId) || rounds[0];
+  // Find currently selected board (null = อยู่หน้ารายการตาราง)
+  const selectedBoard = selectedBoardId ? rounds.find(r => r.id === selectedBoardId) : null;
+  const isCurrentBoardClosed = selectedBoard?.status === 'closed' || selectedBoard?.status === 'drawn';
 
   // Helper to calculate board stats
   const getBoardStats = (board) => {
@@ -129,6 +264,72 @@ export function AdminDashboard({
     const paid = board.numbers.filter(n => n.status === 'paid').length;
     return { total, available, booked, paid };
   };
+
+  // Filtered boards for List Table / Cards view
+  const filteredBoards = useMemo(() => {
+    return rounds.filter(b => {
+      const q = boardSearchQuery.toLowerCase().trim();
+      const matchesSearch = !q || 
+        (b.title && b.title.toLowerCase().includes(q)) ||
+        (b.description && b.description.toLowerCase().includes(q));
+      const matchesStatus = boardStatusFilter === 'all' || b.status === boardStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [rounds, boardSearchQuery, boardStatusFilter]);
+
+  // Overall boards KPI stats
+  const totalBoards = rounds.length;
+  const openBoards = rounds.filter(r => r.status === 'open').length;
+  const drawnBoards = rounds.filter(r => r.status === 'drawn').length;
+  const totalBookedNumbersCount = rounds.reduce((sum, r) => {
+    const s = getBoardStats(r);
+    return sum + (s.booked + s.paid);
+  }, 0);
+
+  // Filtered cards for List Table / Grid view
+  const filteredCards = useMemo(() => {
+    return storeCards.filter(c => {
+      const q = cardSearchQuery.toLowerCase().trim();
+      const matchesSearch = !q || 
+        (c.title && c.title.toLowerCase().includes(q)) ||
+        (c.subtitle && c.subtitle.toLowerCase().includes(q)) ||
+        (c.grade && c.grade.toLowerCase().includes(q)) ||
+        (c.cert && c.cert.toLowerCase().includes(q));
+      const matchesStatus = cardStatusFilter === 'all' || c.status === cardStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [storeCards, cardSearchQuery, cardStatusFilter]);
+
+  // Overall cards KPI stats
+  const totalCards = storeCards.length;
+  const availableCards = storeCards.filter(c => c.status === 'available').length;
+  const soldCards = storeCards.filter(c => c.status === 'sold').length;
+  const totalCardsInventoryValue = storeCards.reduce((sum, c) => sum + (Number(c.price) || 0), 0);
+
+  // Boards Pagination calculations
+  const totalBoardPages = Math.max(1, Math.ceil(filteredBoards.length / boardPageSize));
+  const safeBoardPage = Math.min(boardPage, totalBoardPages);
+  const paginatedBoards = useMemo(() => {
+    const start = (safeBoardPage - 1) * boardPageSize;
+    return filteredBoards.slice(start, start + boardPageSize);
+  }, [filteredBoards, safeBoardPage, boardPageSize]);
+
+  // Cards Pagination calculations
+  const totalCardPages = Math.max(1, Math.ceil(filteredCards.length / cardPageSize));
+  const safeCardPage = Math.min(cardPage, totalCardPages);
+  const paginatedCards = useMemo(() => {
+    const start = (safeCardPage - 1) * cardPageSize;
+    return filteredCards.slice(start, start + cardPageSize);
+  }, [filteredCards, safeCardPage, cardPageSize]);
+
+  // Bookings Pagination calculations (in selected board)
+  const currentBoardBookings = selectedBoard?.bookings || [];
+  const totalBookingPages = Math.max(1, Math.ceil(currentBoardBookings.length / bookingPageSize));
+  const safeBookingPage = Math.min(bookingPage, totalBookingPages);
+  const paginatedBookings = useMemo(() => {
+    const start = (safeBookingPage - 1) * bookingPageSize;
+    return currentBoardBookings.slice(start, start + bookingPageSize);
+  }, [currentBoardBookings, safeBookingPage, bookingPageSize]);
 
   // =========================================================================
   // 1. BOARD ACTIONS (จัดการกระดาน)
@@ -149,6 +350,10 @@ export function AdminDashboard({
   };
 
   const openEditBoardModal = (board) => {
+    if (board.status === 'closed' || board.status === 'drawn') {
+      showNotice('กระดานนี้ปิดจองแล้ว ไม่สามารถแก้ไขได้ (กดดูข้อมูลได้อย่างเดียว)');
+      return;
+    }
     setEditingBoard(board);
     setBoardForm({
       title: board.title || '',
@@ -240,6 +445,10 @@ export function AdminDashboard({
   const handleAddBooking = (e) => {
     e.preventDefault();
     if (!selectedBoard) return;
+    if (selectedBoard.status === 'closed' || selectedBoard.status === 'drawn') {
+      alert('กระดานนี้ปิดจองแล้ว ไม่สามารถเพิ่มหรือแก้ไขข้อมูลการจองได้');
+      return;
+    }
 
     const fbName = bookingForm.facebookName.trim();
     if (!fbName) {
@@ -333,7 +542,7 @@ export function AdminDashboard({
 
   // Toggle booking status between 'booked' (รอยอด) and 'paid' (จ่ายแล้ว)
   const handleToggleBookingStatus = (bookingId) => {
-    if (!selectedBoard) return;
+    if (!selectedBoard || selectedBoard.status === 'closed' || selectedBoard.status === 'drawn') return;
     const booking = (selectedBoard.bookings || []).find(b => b.id === bookingId);
     if (!booking) return;
 
@@ -370,7 +579,7 @@ export function AdminDashboard({
 
   // Delete booking -> Releases numbers back to available pool
   const handleDeleteBooking = (bookingId, custName, numsCount) => {
-    if (!selectedBoard) return;
+    if (!selectedBoard || selectedBoard.status === 'closed' || selectedBoard.status === 'drawn') return;
     if (confirm(`ยกเลิกการจองของคุณ "${custName}" (${numsCount} เบอร์) และคืนเบอร์กลับเป็นเลขว่าง?`)) {
       const updatedBookings = (selectedBoard.bookings || []).filter(b => b.id !== bookingId);
 
@@ -405,6 +614,7 @@ export function AdminDashboard({
 
   // Click on visual grid number to quick-fill booking form
   const handleNumberGridClick = (numItem) => {
+    if (!selectedBoard || selectedBoard.status === 'closed' || selectedBoard.status === 'drawn') return;
     if (numItem.status !== 'available') return;
     const current = bookingForm.numbersInput
       .split(/[\s,]+/)
@@ -516,6 +726,59 @@ export function AdminDashboard({
       onUpdateStoreCards(filtered);
       showNotice(`ลบการ์ด "${cardTitle}" สำเร็จ!`);
     }
+  };
+
+  // Image Upload Handlers (เลือกจากเครื่อง หรือมือถือ)
+  const handleBoardFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await processImageFile(file);
+      if (base64) {
+        setBoardForm(prev => ({ ...prev, coverImage: base64 }));
+        showNotice('เลือกรูปภาพกระดานจากเครื่องสำเร็จ!');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการอ่านไฟล์รูปภาพ');
+    }
+    e.target.value = '';
+  };
+
+  const handleCardCoverFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await processImageFile(file);
+      if (base64) {
+        setCardForm(prev => ({ ...prev, coverImage: base64 }));
+        showNotice('เลือกรูปภาพการ์ดจากเครื่องสำเร็จ!');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการอ่านไฟล์รูปภาพ');
+    }
+    e.target.value = '';
+  };
+
+  const handleCardDetailFilesSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    try {
+      const promises = files.map(f => processImageFile(f));
+      const base64List = await Promise.all(promises);
+      const valid = base64List.filter(Boolean);
+      if (valid.length > 0) {
+        const existing = cardForm.detailImagesText.trim();
+        const combined = existing ? `${existing}\n${valid.join('\n')}` : valid.join('\n');
+        setCardForm(prev => ({ ...prev, detailImagesText: combined }));
+        showNotice(`เลือกรูปเพิ่มเติม ${valid.length} รูปสำเร็จ!`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการอ่านไฟล์รูปภาพ');
+    }
+    e.target.value = '';
   };
 
   const handlePasswordLogin = (e) => {
@@ -649,6 +912,30 @@ export function AdminDashboard({
 
         {/* Exit & Logout Buttons */}
         <div className="admin-actions-right">
+          {/* Supabase Cloud Connection & Sync Status */}
+          {isSupabaseConfigured() ? (
+            <button
+              type="button"
+              className="btn-supabase-status connected"
+              onClick={handleManualCloudSync}
+              disabled={isSyncingCloud}
+              title="เชื่อมต่อ Supabase สำเร็จ (กดเพื่อบังคับซิงค์ข้อมูลทั้งหมดขึ้น Cloud)"
+            >
+              <Database size={15} />
+              <span>{isSyncingCloud ? 'กำลังซิงค์ Cloud...' : 'Supabase Cloud'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-supabase-status offline"
+              onClick={() => setIsSupabaseModalOpen(true)}
+              title="กดเพื่อดูวิธีตั้งค่าเชื่อมต่อ Supabase ฟรี"
+            >
+              <Database size={15} />
+              <span>ใช้ Supabase</span>
+            </button>
+          )}
+
           <button
             type="button"
             className="btn-admin-exit-shop"
@@ -676,14 +963,18 @@ export function AdminDashboard({
           ========================================================================= */}
       {activeTab === 'boards' && (
         <main className="admin-main-container">
-          
-          <div className="admin-section-header">
-            <div>
-              <h2 className="admin-heading-2">จัดการกระดานจองเลข</h2>
-              <p className="admin-heading-desc">
-                ตั้งค่ารูปปก, ข้อความการ์ด, รายละเอียด, ราคา, สถานะ, เลขรางวัล และระบุเบอร์ที่ลูกค้าจอง
-              </p>
-            </div>
+          {!selectedBoard ? (
+            /* ========================================================
+               VIEW A: มีเเค่ตารางรายการกระดานเท่านั้น (Boards Table List View)
+               ======================================================== */
+            <div className="admin-boards-main-view animate-fade-in">
+              <div className="admin-section-header">
+                <div>
+                  <h2 className="admin-heading-2">จัดการกระดานจองเลข</h2>
+                  <p className="admin-heading-desc">
+                    คลิกที่แถวกระดานหรือกดปุ่ม "🎯 จัดการเบอร์" เพื่อเข้าไประบุเบอร์ที่ลูกค้าจอง ตรวจสอบตาราง 00-99 และสรุปยอด
+                  </p>
+                </div>
             <button
               type="button"
               className="btn-admin-primary"
@@ -740,294 +1031,817 @@ export function AdminDashboard({
             </div>
           </div>
 
-          {/* Boards List Horizontal Carousel/Selector */}
-          <div className="admin-boards-selector-row">
-            {rounds.map(board => {
-              const stats = getBoardStats(board);
-              const isSelected = board.id === selectedBoardId;
-
-              return (
-                <div
-                  key={board.id}
-                  className={`admin-board-card-chip ${isSelected ? 'selected' : ''}`}
-                  onClick={() => setSelectedBoardId(board.id)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="chip-cover-thumb">
-                    {board.coverImage ? (
-                      <img src={board.coverImage} alt={board.title} />
-                    ) : (
-                      <div className="chip-slab-mock" />
-                    )}
-                  </div>
-                  <div className="chip-info">
-                    <h4 className="chip-title">{board.title}</h4>
-                    <div className="chip-meta">
-                      <span className="chip-price">{board.pricePerNumber || 50}฿/เบอร์</span>
-                      <span className={`chip-status-tag ${board.status}`}>
-                        {board.status === 'open' ? 'เปิดจอง' : board.status === 'drawn' ? 'ออกผลแล้ว' : 'ปิดจอง'}
-                      </span>
-                      <span className="chip-type-tag">
-                        {getBoardTypeInfo(board.boardType).promoBadge}
-                      </span>
-                    </div>
-                    <div className="chip-remain-row">
-                      <span className="chip-remain">เหลือ {stats.available}/{stats.total} เบอร์</span>
-                      <div className="chip-progress-track">
-                        <div 
-                          className="chip-progress-fill" 
-                          style={{ width: `${Math.round((stats.available / (stats.total || 1)) * 100)}%` }} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="chip-actions">
-                    <button
-                      type="button"
-                      className="btn-icon-tiny edit"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditBoardModal(board);
-                      }}
-                      title="แก้ไขข้อมูลกระดาน"
-                    >
-                      <Edit3 size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-icon-tiny delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteBoard(board.id, board.title);
-                      }}
-                      title="ลบกระดานนี้"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Sub-Panel: 1.1 กระดานที่จะระบุเบอร์ที่จอง */}
-          {selectedBoard && (
-            <div className="admin-board-management-panel animate-fade-in">
-              
-              {/* Selected Board Summary Banner */}
-              <div className="selected-board-banner">
-                <div className="banner-left">
-                  <span className="board-active-badge">
-                    <Sparkles size={14} className="banner-badge-icon" />
-                    <span>กำลังจัดการ:</span> <strong>{selectedBoard.title}</strong>
-                  </span>
-                  <span className="banner-stat">
-                    ราคาเบอร์ละ <strong>{selectedBoard.pricePerNumber || 50} บาท</strong>
-                  </span>
-                  <span className="banner-stat">
-                    สถานะ: <strong className={`status-${selectedBoard.status}`}>
-                      {selectedBoard.status === 'open' ? 'เปิดให้บริการจอง' : 'ปิดให้บริการจอง'}
-                    </strong>
-                  </span>
-                  {selectedBoard.winningNumber && (
-                    <span className="banner-win-num">
-                      🎉 เลขรางวัลที่ออก: <strong>{selectedBoard.winningNumber}</strong>
-                    </span>
-                  )}
-                </div>
-                <div className="banner-right">
-                  <button
-                    type="button"
-                    className="btn-banner-edit"
-                    onClick={() => openEditBoardModal(selectedBoard)}
-                  >
-                    <Edit3 size={14} />
-                    <span>แก้ไขข้อมูลกระดาน</span>
-                  </button>
-                </div>
+          {/* KPI Summary Cards Bar */}
+          <div className="admin-stats-kpi-grid">
+            <div className="admin-kpi-card">
+              <div className="kpi-icon-wrap purple">
+                <Layers size={18} />
               </div>
-
-              {/* Grid: Left = Form to Add Booking, Right = Visual 00-99 Grid */}
-              <div className="admin-booking-split-grid">
-                
-                {/* Form 1.1: ระบุเบอร์ที่จอง */}
-                <div className="admin-booking-box">
-                  <h3 className="box-title">
-                    <UserCheck size={18} className="title-icon" />
-                    <span>1.1 ระบุเบอร์ที่จอง (บันทึกเข้าระบบ)</span>
-                  </h3>
-                  <p className="box-sub">
-                    ใส่ชื่อเฟสและเบอร์ ระบบจะตัดยอดและลบล้างเลขว่างโดยอัตโนมัติทันที
-                  </p>
-
-                  <form onSubmit={handleAddBooking} className="admin-booking-form">
-                    <div className="form-group">
-                      <label className="form-lbl">ชื่อเฟสลูกค้า <span className="req">*</span></label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="เช่น สมชาย ใจดี / Mewie FP"
-                        value={bookingForm.facebookName}
-                        onChange={(e) => setBookingForm(prev => ({ ...prev, facebookName: e.target.value }))}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-lbl">
-                        เลขที่จอง <span className="req">*</span> 
-                        <span className="lbl-hint">(คั่นด้วยจุลภาค เช่น 05, 12, 99 หรือคลิกเลือกที่ตารางขวา)</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="form-input numbers-input"
-                        placeholder="เช่น 05, 12, 99"
-                        value={bookingForm.numbersInput}
-                        onChange={(e) => setBookingForm(prev => ({ ...prev, numbersInput: e.target.value }))}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-lbl">สถานะการชำระเงิน</label>
-                      <div className="status-radio-group">
-                        <label className={`radio-pill ${bookingForm.status === 'booked' ? 'active-booked' : ''}`}>
-                          <input
-                            type="radio"
-                            name="bookingStatus"
-                            value="booked"
-                            checked={bookingForm.status === 'booked'}
-                            onChange={() => setBookingForm(prev => ({ ...prev, status: 'booked' }))}
-                          />
-                          <Clock size={14} />
-                          <span>รอยอด (ยังไม่ชำระ)</span>
-                        </label>
-
-                        <label className={`radio-pill ${bookingForm.status === 'paid' ? 'active-paid' : ''}`}>
-                          <input
-                            type="radio"
-                            name="bookingStatus"
-                            value="paid"
-                            checked={bookingForm.status === 'paid'}
-                            onChange={() => setBookingForm(prev => ({ ...prev, status: 'paid' }))}
-                          />
-                          <CheckCircle2 size={14} />
-                          <span>จ่ายแล้ว (ชำระแล้ว)</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <button type="submit" className="btn-submit-booking">
-                      <Check size={16} />
-                      <span>บันทึกการจอง & หักลบเลขว่างทันที</span>
-                    </button>
-                  </form>
-
-                  {/* Summary of Bookings Table */}
-                  <div className="bookings-summary-table-section">
-                    <h4 className="table-heading-title">
-                      รายการผู้จองในกระดานนี้ ({(selectedBoard.bookings || []).length} รายการ)
-                    </h4>
-
-                    {(!selectedBoard.bookings || selectedBoard.bookings.length === 0) ? (
-                      <div className="empty-bookings-box">
-                        ยังไม่มีรายการจองในกระดานนี้ สามารถระบุเบอร์ที่ช่องด้านบนได้ทันที
-                      </div>
-                    ) : (
-                      <div className="admin-table-container">
-                        <table className="admin-data-table">
-                          <thead>
-                            <tr>
-                              <th>ชื่อเฟส</th>
-                              <th>เลขที่จอง</th>
-                              <th>ยอดเงิน</th>
-                              <th>สถานะ</th>
-                              <th>จัดการ</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedBoard.bookings.map(b => (
-                              <tr key={b.id}>
-                                <td className="td-name">{b.customerName}</td>
-                                <td className="td-nums">
-                                  <div className="nums-tags-wrap">
-                                    {b.numbers.map(num => (
-                                      <span key={num} className="mini-num-tag">{num}</span>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="td-amount">
-                                  {(b.numbers.length * (selectedBoard.pricePerNumber || 50)).toLocaleString()} ฿
-                                </td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    className={`btn-table-status ${b.status}`}
-                                    onClick={() => handleToggleBookingStatus(b.id)}
-                                    title="คลิกเพื่อสลับ รอยอด / จ่ายแล้ว"
-                                  >
-                                    {b.status === 'paid' ? '✅ จ่ายแล้ว' : '⏳ รอยอด'}
-                                  </button>
-                                </td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="btn-table-del"
-                                    onClick={() => handleDeleteBooking(b.id, b.customerName, b.numbers.length)}
-                                    title="ยกเลิกการจองและคืนเบอร์ว่าง"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Visual Number Grid (ตารางตัวเลข 00-99 สำหรับคลิกเลือก / ตรวจสอบ) */}
-                <div className="admin-visual-grid-box">
-                  <div className="visual-grid-header">
-                    <h3 className="box-title">ตารางเลข 00-99 (คลิกเลขว่างเพื่อเลือก)</h3>
-                    <div className="grid-legend">
-                      <span className="legend-item"><span className="legend-dot available" /> ว่าง ({getBoardStats(selectedBoard).available})</span>
-                      <span className="legend-item"><span className="legend-dot booked" /> รอยอด ({getBoardStats(selectedBoard).booked})</span>
-                      <span className="legend-item"><span className="legend-dot paid" /> จ่ายแล้ว ({getBoardStats(selectedBoard).paid})</span>
-                    </div>
-                  </div>
-
-                  <div className="interactive-numbers-grid">
-                    {(selectedBoard.numbers || []).map(item => {
-                      const isWinning = Boolean(selectedBoard.winningNumber) && String(selectedBoard.winningNumber).padStart(2, '0') === item.number;
-                      return (
-                        <button
-                          key={item.number}
-                          type="button"
-                          className={`interactive-num-btn ${item.status} ${isWinning ? 'winning' : ''}`}
-                          onClick={() => handleNumberGridClick(item)}
-                          disabled={item.status !== 'available'}
-                          title={
-                            isWinning 
-                              ? `🎉 เลข ${item.number} (เลขรางวัลที่ออก!)` 
-                              : item.status === 'available' 
-                                ? `เลข ${item.number} (ว่าง) - คลิกเพื่อเลือก` 
-                                : `เลข ${item.number} (${item.customerName || item.status})`
-                          }
-                        >
-                          <span className="num-text">{item.number}</span>
-                          {isWinning && <span className="win-crown-icon">👑</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
+              <div className="kpi-info-col">
+                <span className="kpi-lbl">กระดานทั้งหมด</span>
+                <span className="kpi-val">{totalBoards} <small>กระดาน</small></span>
               </div>
             </div>
+
+            <div className="admin-kpi-card">
+              <div className="kpi-icon-wrap green">
+                <CheckCircle2 size={18} />
+              </div>
+              <div className="kpi-info-col">
+                <span className="kpi-lbl">เปิดรับจองอยู่</span>
+                <span className="kpi-val text-green">{openBoards} <small>กระดาน</small></span>
+              </div>
+            </div>
+
+            <div className="admin-kpi-card">
+              <div className="kpi-icon-wrap amber">
+                <UserCheck size={18} />
+              </div>
+              <div className="kpi-info-col">
+                <span className="kpi-lbl">เบอร์ที่จองแล้วรวม</span>
+                <span className="kpi-val text-amber">{totalBookedNumbersCount} <small>เบอร์</small></span>
+              </div>
+            </div>
+
+            <div className="admin-kpi-card">
+              <div className="kpi-icon-wrap cyan">
+                <Sparkles size={18} />
+              </div>
+              <div className="kpi-info-col">
+                <span className="kpi-lbl">ออกรางวัลแล้ว</span>
+                <span className="kpi-val text-cyan">{drawnBoards} <small>กระดาน</small></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Search, Filter & View Mode Toolbar */}
+          <div className="admin-toolbar-row">
+            <div className="admin-search-filter-wrap">
+              <div className="admin-search-box">
+                <Search size={16} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="ค้นหากระดาน..."
+                  value={boardSearchQuery}
+                  onChange={(e) => setBoardSearchQuery(e.target.value)}
+                  className="admin-search-input"
+                />
+                {boardSearchQuery && (
+                  <button type="button" className="btn-clear-search" onClick={() => setBoardSearchQuery('')}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="admin-filter-pills">
+                <button
+                  type="button"
+                  className={`filter-pill ${boardStatusFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => setBoardStatusFilter('all')}
+                >
+                  ทั้งหมด ({rounds.length})
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${boardStatusFilter === 'open' ? 'active' : ''}`}
+                  onClick={() => setBoardStatusFilter('open')}
+                >
+                  🟢 เปิดจอง ({openBoards})
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${boardStatusFilter === 'closed' ? 'active' : ''}`}
+                  onClick={() => setBoardStatusFilter('closed')}
+                >
+                  🔴 ปิดจอง ({rounds.filter(r => r.status === 'closed').length})
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${boardStatusFilter === 'drawn' ? 'active' : ''}`}
+                  onClick={() => setBoardStatusFilter('drawn')}
+                >
+                  🟣 ออกผลแล้ว ({drawnBoards})
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-view-switcher">
+              <button
+                type="button"
+                className={`btn-view-toggle ${boardViewMode === 'table' ? 'active' : ''}`}
+                onClick={() => setBoardViewMode('table')}
+                title="มุมมองตารางรายการ (List Table)"
+              >
+                <TableIcon size={15} />
+                <span>ตารางรายการ</span>
+              </button>
+              <button
+                type="button"
+                className={`btn-view-toggle ${boardViewMode === 'cards' ? 'active' : ''}`}
+                onClick={() => setBoardViewMode('cards')}
+                title="มุมมองการ์ด (Grid)"
+              >
+                <LayoutGrid size={15} />
+                <span>การ์ด</span>
+              </button>
+            </div>
+          </div>
+
+          {/* VIEW 1: List Table View (ตารางรายการกระดาน - ค่าเริ่มต้น) */}
+          {boardViewMode === 'table' && (
+            <div className="admin-table-card animate-fade-in">
+              <div className="admin-table-container">
+                <table className="admin-list-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '70px', textAlign: 'center' }}>รูปปก</th>
+                      <th>ชื่อกระดาน / รายละเอียด</th>
+                      <th>ประเภทกระดาน</th>
+                      <th>ราคา/เบอร์</th>
+                      <th>สถานะ</th>
+                      <th>เบอร์ว่าง / ความคืบหน้า</th>
+                      <th>เลขรางวัล</th>
+                      <th style={{ width: '190px', textAlign: 'center' }}>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedBoards.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="empty-table-cell">
+                          ไม่พบกระดานที่ตรงกับเงื่อนไขการค้นหา
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedBoards.map(board => {
+                        const stats = getBoardStats(board);
+                        const isSelected = board.id === selectedBoardId;
+                        const typeInfo = getBoardTypeInfo(board.boardType);
+                        const isBoardClosed = board.status === 'closed' || board.status === 'drawn';
+
+                        return (
+                          <tr 
+                            key={board.id} 
+                            className="admin-table-row"
+                            onClick={() => setSelectedBoardId(board.id)}
+                            title={isBoardClosed ? "คลิกเพื่อดูข้อมูลกระดานนี้ (โหมดดูข้อมูล)" : "คลิกเพื่อเข้าหน้าจัดการเบอร์และบันทึกยอดของกระดานนี้"}
+                          >
+                            {/* 1. Cover Thumbnail */}
+                            <td className="td-thumb">
+                              <div className="table-thumb-wrap">
+                                {board.coverImage ? (
+                                  <img src={board.coverImage} alt={board.title} />
+                                ) : (
+                                  <div className="table-slab-placeholder">
+                                    <span>FP</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* 2. Board Title & Description */}
+                            <td className="td-title-info">
+                              <div className="table-title-wrap">
+                                <div className="title-top-row">
+                                  <span className="table-item-title">{board.title}</span>
+                                  {isSelected && (
+                                    <span className="active-selected-tag">
+                                      <CheckCircle size={12} />
+                                      <span>{isBoardClosed ? 'กำลังดูข้อมูล' : 'กำลังจัดการ'}</span>
+                                    </span>
+                                  )}
+                                </div>
+                                {board.description && (
+                                  <p className="table-item-desc">{board.description}</p>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* 3. Board Type & Promo */}
+                            <td className="td-type">
+                              <div className="table-type-wrap">
+                                <span className="chip-type-tag">
+                                  {typeInfo.promoBadge}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* 4. Price */}
+                            <td className="td-price">
+                              <span className="table-price-badge">{board.pricePerNumber || 50} ฿</span>
+                            </td>
+
+                            {/* 5. Status */}
+                            <td className="td-status">
+                              <span className={`chip-status-tag ${board.status}`}>
+                                {board.status === 'open' ? '🟢 เปิดจอง' : board.status === 'drawn' ? '🟣 ออกผลแล้ว' : '🔴 ปิดจอง'}
+                              </span>
+                            </td>
+
+                            {/* 6. Remaining Numbers & Progress */}
+                            <td className="td-progress">
+                              <div className="table-progress-box">
+                                <div className="progress-labels">
+                                  <span className="remain-txt">ว่าง <strong>{stats.available}</strong>/{stats.total}</span>
+                                  <span className="percent-txt">{Math.round((stats.available / (stats.total || 1)) * 100)}%</span>
+                                </div>
+                                <div className="table-progress-track">
+                                  <div 
+                                    className="table-progress-bar"
+                                    style={{ width: `${Math.round((stats.available / (stats.total || 1)) * 100)}%` }}
+                                  />
+                                </div>
+                                <span className="booked-txt">จองแล้ว {stats.booked + stats.paid} เบอร์</span>
+                              </div>
+                            </td>
+
+                            {/* 7. Winning Number */}
+                            <td className="td-win">
+                              {board.winningNumber ? (
+                                <span className="table-win-badge">
+                                  👑 {board.winningNumber}
+                                </span>
+                              ) : (
+                                <span className="text-muted">-</span>
+                              )}
+                            </td>
+
+                            {/* 8. Actions */}
+                            <td className="td-actions" onClick={(e) => e.stopPropagation()}>
+                              <div className="table-actions-group">
+                                <button
+                                  type="button"
+                                  className={`btn-table-action ${isBoardClosed ? 'view-mode' : 'select'}`}
+                                  onClick={() => setSelectedBoardId(board.id)}
+                                  title={isBoardClosed ? "คลิกเพื่อดูข้อมูลกระดานนี้ (โหมดดูข้อมูล)" : "คลิกเพื่อเข้าหน้าจัดการเบอร์และบันทึกยอดของกระดานนี้"}
+                                >
+                                  {isBoardClosed ? (
+                                    <>
+                                      <Eye size={13} />
+                                      <span>ดูข้อมูล</span>
+                                    </>
+                                  ) : (
+                                    <span>🎯 จัดการเบอร์</span>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn-table-action edit ${isBoardClosed ? 'disabled' : ''}`}
+                                  disabled={isBoardClosed}
+                                  onClick={() => !isBoardClosed && openEditBoardModal(board)}
+                                  title={isBoardClosed ? "กระดานนี้ปิดจองแล้ว ไม่สามารถแก้ไขได้" : "แก้ไขข้อมูลกระดาน"}
+                                >
+                                  {isBoardClosed ? <Lock size={12} /> : <Edit3 size={13} />}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-table-action delete"
+                                  onClick={() => handleDeleteBoard(board.id, board.title)}
+                                  title="ลบกระดาน"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Boards Pagination Bar */}
+              {filteredBoards.length > 0 && (
+                <div className="admin-table-pagination-bar">
+                  <div className="pagination-info">
+                    <span>
+                      แสดง <strong>{((safeBoardPage - 1) * boardPageSize) + 1} - {Math.min(safeBoardPage * boardPageSize, filteredBoards.length)}</strong> จากทั้งหมด <strong>{filteredBoards.length}</strong> รายการ
+                    </span>
+                    <div className="page-size-wrap">
+                      <span>แสดงหน้าละ:</span>
+                      <select 
+                        className="page-size-select"
+                        value={boardPageSize}
+                        onChange={(e) => {
+                          setBoardPageSize(Number(e.target.value));
+                          setBoardPage(1);
+                        }}
+                      >
+                        <option value={5}>5</option>
+                        <option value={8}>8</option>
+                        <option value={15}>15</option>
+                        <option value={30}>30</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {totalBoardPages > 1 && (
+                    <div className="pagination-controls">
+                      <button
+                        type="button"
+                        className="btn-page-nav"
+                        disabled={safeBoardPage <= 1}
+                        onClick={() => setBoardPage(1)}
+                        title="หน้าแรกสุด"
+                      >
+                        <ChevronsLeft size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-page-nav"
+                        disabled={safeBoardPage <= 1}
+                        onClick={() => setBoardPage(p => Math.max(1, p - 1))}
+                        title="หน้าก่อนหน้า"
+                      >
+                        <ChevronLeft size={15} />
+                      </button>
+
+                      <div className="pagination-numbers">
+                        {getPageNumbers(safeBoardPage, totalBoardPages).map(pageNum => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            className={`btn-page-num ${pageNum === safeBoardPage ? 'active' : ''}`}
+                            onClick={() => setBoardPage(pageNum)}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn-page-nav"
+                        disabled={safeBoardPage >= totalBoardPages}
+                        onClick={() => setBoardPage(p => Math.min(totalBoardPages, p + 1))}
+                        title="หน้าถัดไป"
+                      >
+                        <ChevronRight size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-page-nav"
+                        disabled={safeBoardPage >= totalBoardPages}
+                        onClick={() => setBoardPage(totalBoardPages)}
+                        title="หน้าสุดท้าย"
+                      >
+                        <ChevronsRight size={15} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW 2: Cards Grid View */}
+          {boardViewMode === 'cards' && (
+            <div className="admin-boards-selector-row animate-fade-in">
+              {filteredBoards.map(board => {
+                const stats = getBoardStats(board);
+                const isSelected = board.id === selectedBoardId;
+
+                return (
+                  <div
+                    key={board.id}
+                    className={`admin-board-card-chip ${isSelected ? 'selected' : ''}`}
+                    onClick={() => setSelectedBoardId(board.id)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="chip-cover-thumb">
+                      {board.coverImage ? (
+                        <img src={board.coverImage} alt={board.title} />
+                      ) : (
+                        <div className="chip-slab-mock" />
+                      )}
+                    </div>
+                    <div className="chip-info">
+                      <h4 className="chip-title">{board.title}</h4>
+                      <div className="chip-meta">
+                        <span className="chip-price">{board.pricePerNumber || 50}฿/เบอร์</span>
+                        <span className={`chip-status-tag ${board.status}`}>
+                          {board.status === 'open' ? 'เปิดจอง' : board.status === 'drawn' ? 'ออกผลแล้ว' : 'ปิดจอง'}
+                        </span>
+                        <span className="chip-type-tag">
+                          {getBoardTypeInfo(board.boardType).promoBadge}
+                        </span>
+                      </div>
+                      <div className="chip-remain-row">
+                        <span className="chip-remain">เหลือ {stats.available}/{stats.total} เบอร์</span>
+                        <div className="chip-progress-track">
+                          <div 
+                            className="chip-progress-fill" 
+                            style={{ width: `${Math.round((stats.available / (stats.total || 1)) * 100)}%` }} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="chip-actions">
+                      {board.status === 'open' && (
+                        <button
+                          type="button"
+                          className="btn-icon-tiny edit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditBoardModal(board);
+                          }}
+                          title="แก้ไขข้อมูลกระดาน"
+                        >
+                          <Edit3 size={13} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-icon-tiny delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBoard(board.id, board.title);
+                        }}
+                        title="ลบกระดานนี้"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          </div>
+          ) : (
+            <div className="admin-board-management-panel animate-fade-in">
+                  {/* Top Navigation Back Bar */}
+                  <div className="admin-subview-nav-bar">
+                    <button
+                      type="button"
+                      className="btn-admin-back-table"
+                      onClick={() => setSelectedBoardId(null)}
+                      title="ย้อนกลับไปตารางรายการกระดาน"
+                    >
+                      <ArrowLeft size={16} />
+                      <span>← กลับไปตารางรายการกระดาน</span>
+                    </button>
+                    
+                    <div className="subview-breadcrumb">
+                      <span className="crumb-parent" onClick={() => setSelectedBoardId(null)} role="button">
+                        กระดานจองเลข
+                      </span>
+                      <span className="crumb-sep">/</span>
+                      <span className="crumb-current">{selectedBoard.title}</span>
+                      {isCurrentBoardClosed && (
+                        <span className="crumb-tag-locked">
+                          <Lock size={12} />
+                          <span>ดูข้อมูลเท่านั้น</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Selected Board Summary Banner */}
+                  <div className={`selected-board-banner ${isCurrentBoardClosed ? 'is-closed-banner' : ''}`}>
+                    <div className="banner-left">
+                      <span className="board-active-badge">
+                        <Sparkles size={14} className="banner-badge-icon" />
+                        <span>{isCurrentBoardClosed ? 'กำลังดูข้อมูล:' : 'กำลังจัดการ:'}</span> <strong>{selectedBoard.title}</strong>
+                      </span>
+                      <span className="banner-stat">
+                        ราคาเบอร์ละ <strong>{selectedBoard.pricePerNumber || 50} บาท</strong>
+                      </span>
+                      <span className="banner-stat">
+                        สถานะ: <strong className={`status-${selectedBoard.status}`}>
+                          {selectedBoard.status === 'open' ? '🟢 เปิดให้บริการจอง' : selectedBoard.status === 'drawn' ? '🟣 ออกผลรางวัลแล้ว' : '🔴 ปิดให้บริการจอง'}
+                        </strong>
+                      </span>
+                      {selectedBoard.winningNumber && (
+                        <span className="banner-win-num">
+                          👑 เลขรางวัลที่ออก: <strong>{selectedBoard.winningNumber}</strong>
+                        </span>
+                      )}
+                    </div>
+                    <div className="banner-right">
+                      {!isCurrentBoardClosed ? (
+                        <button
+                          type="button"
+                          className="btn-banner-edit"
+                          onClick={() => openEditBoardModal(selectedBoard)}
+                        >
+                          <Edit3 size={14} />
+                          <span>แก้ไขข้อมูลกระดาน</span>
+                        </button>
+                      ) : (
+                        <span className="banner-locked-tag">
+                          <Lock size={13} />
+                          <span>ปิดจองแล้ว (โหมดดูข้อมูล)</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Grid: Left = Form/Notice, Right = Visual 00-99 Grid */}
+                  <div className="admin-booking-split-grid">
+                    
+                    {/* Form 1.1 / Locked Notice: ระบุเบอร์ที่จอง */}
+                    <div className="admin-booking-box">
+                      <h3 className="box-title">
+                        <UserCheck size={18} className="title-icon" />
+                        <span>1.1 ข้อมูลการจอง {!isCurrentBoardClosed ? '(ระบุเบอร์ที่จอง)' : '(ปิดให้บริการจองแล้ว)'}</span>
+                      </h3>
+
+                      {!isCurrentBoardClosed ? (
+                        <>
+                          <p className="box-sub">
+                            ใส่ชื่อเฟสและเบอร์ ระบบจะตัดยอดและลบล้างเลขว่างโดยอัตโนมัติทันที
+                          </p>
+
+                          <form onSubmit={handleAddBooking} className="admin-booking-form">
+                            <div className="form-group">
+                              <label className="form-lbl">ชื่อเฟสลูกค้า <span className="req">*</span></label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="เช่น สมชาย ใจดี / Mewie FP"
+                                value={bookingForm.facebookName}
+                                onChange={(e) => setBookingForm(prev => ({ ...prev, facebookName: e.target.value }))}
+                                required
+                              />
+                            </div>
+
+                            <div className="form-group">
+                              <label className="form-lbl">
+                                เลขที่จอง <span className="req">*</span> 
+                                <span className="lbl-hint">(คั่นด้วยจุลภาค เช่น 05, 12, 99 หรือคลิกเลือกที่ตารางขวา)</span>
+                              </label>
+                              <input
+                                type="text"
+                                className="form-input numbers-input"
+                                placeholder="เช่น 05, 12, 99"
+                                value={bookingForm.numbersInput}
+                                onChange={(e) => setBookingForm(prev => ({ ...prev, numbersInput: e.target.value }))}
+                                required
+                              />
+                            </div>
+
+                            <div className="form-group">
+                              <label className="form-lbl">สถานะการชำระเงิน</label>
+                              <div className="status-radio-group">
+                                <label className={`radio-pill ${bookingForm.status === 'booked' ? 'active-booked' : ''}`}>
+                                  <input
+                                    type="radio"
+                                    name="bookingStatus"
+                                    value="booked"
+                                    checked={bookingForm.status === 'booked'}
+                                    onChange={() => setBookingForm(prev => ({ ...prev, status: 'booked' }))}
+                                  />
+                                  <Clock size={14} />
+                                  <span>รอยอด (ยังไม่ชำระ)</span>
+                                </label>
+
+                                <label className={`radio-pill ${bookingForm.status === 'paid' ? 'active-paid' : ''}`}>
+                                  <input
+                                    type="radio"
+                                    name="bookingStatus"
+                                    value="paid"
+                                    checked={bookingForm.status === 'paid'}
+                                    onChange={() => setBookingForm(prev => ({ ...prev, status: 'paid' }))}
+                                  />
+                                  <CheckCircle2 size={14} />
+                                  <span>จ่ายแล้ว (ชำระแล้ว)</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            <button type="submit" className="btn-submit-booking">
+                              <Check size={16} />
+                              <span>บันทึกการจอง & หักลบเลขว่างทันที</span>
+                            </button>
+                          </form>
+                        </>
+                      ) : (
+                        <div className="admin-booking-locked-box animate-fade-in">
+                          <div className="locked-badge-row">
+                            <Lock size={18} className="locked-icon" />
+                            <h4>กระดานนี้ปิดให้บริการจองแล้ว (โหมดดูข้อมูลเท่านั้น)</h4>
+                          </div>
+                          <p className="locked-subtext">
+                            {selectedBoard.status === 'drawn'
+                              ? `กระดานนี้ออกผลรางวัลแล้ว (เลขที่ออก: 👑 ${selectedBoard.winningNumber || '-'}) ข้อมูลทั้งหมดถูกล็อค ไม่สามารถแก้ไขหรือเพิ่มการจองได้`
+                              : 'กระดานนี้ปิดรอบการจองแล้ว ข้อมูลทั้งหมดถูกล็อค ไม่สามารถแก้ไข เพิ่มรายการจอง หรือยกเลิกเบอร์ได้'}
+                          </p>
+                          <div className="locked-stats-summary">
+                            <div className="locked-stat-item">
+                              <span className="lbl">ยอดเบอร์ที่จอง:</span>
+                              <strong className="val text-amber">{(selectedBoard.numbers || []).filter(n => n.status !== 'available').length} เบอร์</strong>
+                            </div>
+                            <div className="locked-stat-item">
+                              <span className="lbl">ยอดเงินรวม:</span>
+                              <strong className="val text-emerald">{((selectedBoard.numbers || []).filter(n => n.status !== 'available').length * (selectedBoard.pricePerNumber || 50)).toLocaleString()} บาท</strong>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Summary of Bookings Table */}
+                      <div className="bookings-summary-table-section">
+                        <h4 className="table-heading-title">
+                          รายการผู้จองในกระดานนี้ ({(selectedBoard.bookings || []).length} รายการ)
+                        </h4>
+
+                        {(!selectedBoard.bookings || selectedBoard.bookings.length === 0) ? (
+                          <div className="empty-bookings-box">
+                            ยังไม่มีรายการจองในกระดานนี้
+                          </div>
+                        ) : (
+                          <>
+                            <div className="admin-table-container">
+                              <table className="admin-data-table">
+                                <thead>
+                                  <tr>
+                                    <th>ชื่อเฟส</th>
+                                    <th>เลขที่จอง</th>
+                                    <th>ยอดเงิน</th>
+                                    <th>สถานะ</th>
+                                    <th>จัดการ</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedBookings.map(b => (
+                                    <tr key={b.id}>
+                                      <td className="td-name">{b.customerName}</td>
+                                      <td className="td-nums">
+                                        <div className="nums-tags-wrap">
+                                          {b.numbers.map(num => (
+                                            <span key={num} className="mini-num-tag">{num}</span>
+                                          ))}
+                                        </div>
+                                      </td>
+                                      <td className="td-amount">
+                                        {(b.numbers.length * (selectedBoard.pricePerNumber || 50)).toLocaleString()} ฿
+                                      </td>
+                                      <td>
+                                        {!isCurrentBoardClosed ? (
+                                          <button
+                                            type="button"
+                                            className={`btn-table-status ${b.status}`}
+                                            onClick={() => handleToggleBookingStatus(b.id)}
+                                            title="คลิกเพื่อสลับ รอยอด / จ่ายแล้ว"
+                                          >
+                                            {b.status === 'paid' ? '✅ จ่ายแล้ว' : '⏳ รอยอด'}
+                                          </button>
+                                        ) : (
+                                          <span className={`chip-status-tag ${b.status === 'paid' ? 'open' : 'closed'}`}>
+                                            {b.status === 'paid' ? '✅ จ่ายแล้ว' : '⏳ รอยอด'}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td>
+                                        {!isCurrentBoardClosed ? (
+                                          <button
+                                            type="button"
+                                            className="btn-table-del"
+                                            onClick={() => handleDeleteBooking(b.id, b.customerName, b.numbers.length)}
+                                            title="ยกเลิกการจองและคืนเบอร์ว่าง"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        ) : (
+                                          <span className="text-muted" title="กระดานปิดจองแล้ว ไม่สามารถแก้ไขได้">-</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Bookings Pagination Bar */}
+                            {currentBoardBookings.length > 0 && (
+                              <div className="admin-table-pagination-bar mini">
+                                <div className="pagination-info">
+                                  <span>
+                                    แสดง <strong>{((safeBookingPage - 1) * bookingPageSize) + 1} - {Math.min(safeBookingPage * bookingPageSize, currentBoardBookings.length)}</strong> จาก <strong>{currentBoardBookings.length}</strong> รายการ
+                                  </span>
+                                </div>
+
+                                {totalBookingPages > 1 && (
+                                  <div className="pagination-controls">
+                                    <button
+                                      type="button"
+                                      className="btn-page-nav"
+                                      disabled={safeBookingPage <= 1}
+                                      onClick={() => setBookingPage(1)}
+                                      title="หน้าแรก"
+                                    >
+                                      <ChevronsLeft size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-page-nav"
+                                      disabled={safeBookingPage <= 1}
+                                      onClick={() => setBookingPage(p => Math.max(1, p - 1))}
+                                      title="ก่อนหน้า"
+                                    >
+                                      <ChevronLeft size={13} />
+                                    </button>
+
+                                    <div className="pagination-numbers">
+                                      {getPageNumbers(safeBookingPage, totalBookingPages).map(pageNum => (
+                                        <button
+                                          key={pageNum}
+                                          type="button"
+                                          className={`btn-page-num ${pageNum === safeBookingPage ? 'active' : ''}`}
+                                          onClick={() => setBookingPage(pageNum)}
+                                        >
+                                          {pageNum}
+                                        </button>
+                                      ))}
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      className="btn-page-nav"
+                                      disabled={safeBookingPage >= totalBookingPages}
+                                      onClick={() => setBookingPage(p => Math.min(totalBookingPages, p + 1))}
+                                      title="ถัดไป"
+                                    >
+                                      <ChevronRight size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-page-nav"
+                                      disabled={safeBookingPage >= totalBookingPages}
+                                      onClick={() => setBookingPage(totalBookingPages)}
+                                      title="หน้าสุดท้าย"
+                                    >
+                                      <ChevronsRight size={13} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Visual Number Grid (ตารางตัวเลข 00-99 สำหรับคลิกเลือก / ตรวจสอบ) */}
+                    <div className="admin-visual-grid-box">
+                      <div className="visual-grid-header">
+                        <h3 className="box-title">
+                          {isCurrentBoardClosed 
+                            ? 'ตารางเลข 00-99 (โหมดดูข้อมูล)' 
+                            : 'ตารางเลข 00-99 (คลิกเลขว่างเพื่อเลือก)'}
+                        </h3>
+                        <div className="grid-legend">
+                          <span className="legend-item"><span className="legend-dot available" /> ว่าง ({getBoardStats(selectedBoard).available})</span>
+                          <span className="legend-item"><span className="legend-dot booked" /> รอยอด ({getBoardStats(selectedBoard).booked})</span>
+                          <span className="legend-item"><span className="legend-dot paid" /> จ่ายแล้ว ({getBoardStats(selectedBoard).paid})</span>
+                        </div>
+                      </div>
+
+                      <div className={`interactive-numbers-grid ${isCurrentBoardClosed ? 'read-only' : ''}`}>
+                        {(selectedBoard.numbers || []).map(item => {
+                          const isWinning = Boolean(selectedBoard.winningNumber) && String(selectedBoard.winningNumber).padStart(2, '0') === item.number;
+                          return (
+                            <button
+                              key={item.number}
+                              type="button"
+                              className={`interactive-num-btn ${item.status} ${isWinning ? 'winning' : ''} ${isCurrentBoardClosed ? 'read-only' : ''}`}
+                              onClick={() => !isCurrentBoardClosed && handleNumberGridClick(item)}
+                              disabled={isCurrentBoardClosed || item.status !== 'available'}
+                              title={
+                                isWinning 
+                                  ? `🎉 เลข ${item.number} (เลขรางวัลที่ออก!)` 
+                                  : isCurrentBoardClosed
+                                    ? `เลข ${item.number} (${item.status === 'available' ? 'ว่าง' : item.customerName || item.status}) - ปิดให้บริการจองแล้ว`
+                                    : item.status === 'available' 
+                                      ? `เลข ${item.number} (ว่าง) - คลิกเพื่อเลือก` 
+                                      : `เลข ${item.number} (${item.customerName || item.status})`
+                              }
+                            >
+                              <span className="num-text">{item.number}</span>
+                              {isWinning && <span className="win-crown-icon">👑</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Bottom Back Navigation Button */}
+                  <div className="subview-bottom-nav">
+                    <button
+                      type="button"
+                      className="btn-admin-back-table"
+                      onClick={() => setSelectedBoardId(null)}
+                    >
+                      <ArrowLeft size={16} />
+                      <span>← กลับไปตารางรายการกระดาน</span>
+                    </button>
+                  </div>
+
+                </div>
           )}
 
         </main>
@@ -1056,61 +1870,364 @@ export function AdminDashboard({
             </button>
           </div>
 
-          {/* Cards Grid */}
-          <div className="admin-cards-catalog-grid">
-            {storeCards.map(card => (
-              <div key={card.id} className="admin-card-item-box">
-                <div className="admin-card-thumb-wrap">
-                  <img src={card.coverImage} alt={card.title} className="admin-card-img" />
-                  <span className={`admin-card-status-badge ${card.status}`}>
-                    {card.status === 'available' ? 'มีสินค้า' : 'ขายแล้ว'}
-                  </span>
-                  <span className="admin-card-grade-badge">{card.grade || 'PCG 10'}</span>
-                </div>
-
-                <div className="admin-card-info-col">
-                  <h3 className="admin-card-title">{card.title}</h3>
-                  <span className="admin-card-sub">{card.subtitle}</span>
-                  <div className="admin-card-price-row">
-                    <span className="price-label">ราคา:</span>
-                    <span className="price-val">{Number(card.price || 0).toLocaleString()} ฿</span>
-                  </div>
-
-                  <div className="admin-card-meta-chips">
-                    <span className="meta-chip">
-                      <ImageIcon size={12} />
-                      <span>{card.detailImages ? card.detailImages.length : 1} รูปดีเทล</span>
-                    </span>
-                    {card.videoUrl && (
-                      <span className="meta-chip video">
-                        <Video size={12} />
-                        <span>มีวีดีโอ</span>
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="admin-card-actions-row">
-                    <button
-                      type="button"
-                      className="btn-card-edit"
-                      onClick={() => openEditCardModal(card)}
-                    >
-                      <Edit3 size={14} />
-                      <span>แก้ไข</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-card-del"
-                      onClick={() => handleDeleteCard(card.id, card.title)}
-                    >
-                      <Trash2 size={14} />
-                      <span>ลบ</span>
-                    </button>
-                  </div>
-                </div>
+          {/* KPI Summary Cards Bar for Cards */}
+          <div className="admin-stats-kpi-grid">
+            <div className="admin-kpi-card">
+              <div className="kpi-icon-wrap purple">
+                <CreditCard size={18} />
               </div>
-            ))}
+              <div className="kpi-info-col">
+                <span className="kpi-lbl">การ์ดทั้งหมด</span>
+                <span className="kpi-val">{totalCards} <small>ใบ</small></span>
+              </div>
+            </div>
+
+            <div className="admin-kpi-card">
+              <div className="kpi-icon-wrap green">
+                <Package size={18} />
+              </div>
+              <div className="kpi-info-col">
+                <span className="kpi-lbl">พร้อมจำหน่าย</span>
+                <span className="kpi-val text-green">{availableCards} <small>ใบ</small></span>
+              </div>
+            </div>
+
+            <div className="admin-kpi-card">
+              <div className="kpi-icon-wrap rose">
+                <Award size={18} />
+              </div>
+              <div className="kpi-info-col">
+                <span className="kpi-lbl">ขายแล้ว</span>
+                <span className="kpi-val text-rose">{soldCards} <small>ใบ</small></span>
+              </div>
+            </div>
+
+            <div className="admin-kpi-card">
+              <div className="kpi-icon-wrap amber">
+                <TrendingUp size={18} />
+              </div>
+              <div className="kpi-info-col">
+                <span className="kpi-lbl">มูลค่าคลังสินค้ารวม</span>
+                <span className="kpi-val text-amber">{totalCardsInventoryValue.toLocaleString()} <small>฿</small></span>
+              </div>
+            </div>
           </div>
+
+          {/* Search, Filter & View Mode Toolbar for Cards */}
+          <div className="admin-toolbar-row">
+            <div className="admin-search-filter-wrap">
+              <div className="admin-search-box">
+                <Search size={16} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="ค้นหาชื่อการ์ด, รหัส Cert, เกรด..."
+                  value={cardSearchQuery}
+                  onChange={(e) => setCardSearchQuery(e.target.value)}
+                  className="admin-search-input"
+                />
+                {cardSearchQuery && (
+                  <button type="button" className="btn-clear-search" onClick={() => setCardSearchQuery('')}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="admin-filter-pills">
+                <button
+                  type="button"
+                  className={`filter-pill ${cardStatusFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => setCardStatusFilter('all')}
+                >
+                  ทั้งหมด ({storeCards.length})
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${cardStatusFilter === 'available' ? 'active' : ''}`}
+                  onClick={() => setCardStatusFilter('available')}
+                >
+                  🟢 มีสินค้า ({availableCards})
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${cardStatusFilter === 'sold' ? 'active' : ''}`}
+                  onClick={() => setCardStatusFilter('sold')}
+                >
+                  🔴 ขายแล้ว ({soldCards})
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-view-switcher">
+              <button
+                type="button"
+                className={`btn-view-toggle ${cardViewMode === 'table' ? 'active' : ''}`}
+                onClick={() => setCardViewMode('table')}
+                title="มุมมองตารางรายการ (List Table)"
+              >
+                <TableIcon size={15} />
+                <span>ตารางรายการ</span>
+              </button>
+              <button
+                type="button"
+                className={`btn-view-toggle ${cardViewMode === 'cards' ? 'active' : ''}`}
+                onClick={() => setCardViewMode('cards')}
+                title="มุมมองการ์ด (Grid)"
+              >
+                <LayoutGrid size={15} />
+                <span>การ์ด</span>
+              </button>
+            </div>
+          </div>
+
+          {/* VIEW 1: Cards Table List (ตารางรายการการ์ด - ค่าเริ่มต้น) */}
+          {cardViewMode === 'table' && (
+            <div className="admin-table-card animate-fade-in">
+              <div className="admin-table-container">
+                <table className="admin-list-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '70px', textAlign: 'center' }}>รูปภาพ</th>
+                      <th>ชื่อการ์ด / รายละเอียด</th>
+                      <th>เกรด (Grade)</th>
+                      <th>ราคา</th>
+                      <th>สถานะ</th>
+                      <th>รูปดีเทล & สื่อ</th>
+                      <th style={{ width: '150px', textAlign: 'center' }}>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedCards.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="empty-table-cell">
+                          ไม่พบการ์ดที่ตรงกับเงื่อนไขการค้นหา
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedCards.map(card => (
+                        <tr key={card.id} className="admin-table-row">
+                          {/* 1. Cover Thumbnail */}
+                          <td className="td-thumb">
+                            <div className="table-thumb-wrap card-thumb">
+                              <img src={card.coverImage} alt={card.title} />
+                            </div>
+                          </td>
+
+                          {/* 2. Card Title & Info */}
+                          <td className="td-title-info">
+                            <div className="table-title-wrap">
+                              <span className="table-item-title">{card.title}</span>
+                              <div className="table-item-sub-row">
+                                <span className="table-item-desc">{card.subtitle}</span>
+                                {card.cert && (
+                                  <span className="table-cert-tag">Cert #{card.cert}</span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* 3. Grade */}
+                          <td className="td-grade">
+                            <span className="table-grade-badge">{card.grade || 'PCG 10'}</span>
+                          </td>
+
+                          {/* 4. Price */}
+                          <td className="td-price">
+                            <span className="table-price-badge">{Number(card.price || 0).toLocaleString()} ฿</span>
+                          </td>
+
+                          {/* 5. Status */}
+                          <td className="td-status">
+                            <span className={`chip-status-tag ${card.status === 'available' ? 'open' : 'closed'}`}>
+                              {card.status === 'available' ? '🟢 มีสินค้า' : '🔴 ขายแล้ว'}
+                            </span>
+                          </td>
+
+                          {/* 6. Media */}
+                          <td className="td-media">
+                            <div className="table-media-tags">
+                              <span className="meta-chip">
+                                <ImageIcon size={12} />
+                                <span>{card.detailImages ? card.detailImages.length : 1} รูป</span>
+                              </span>
+                              {card.videoUrl && (
+                                <span className="meta-chip video">
+                                  <Video size={12} />
+                                  <span>วิดีโอ</span>
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* 7. Actions */}
+                          <td className="td-actions" onClick={(e) => e.stopPropagation()}>
+                            <div className="table-actions-group">
+                              <button
+                                type="button"
+                                className="btn-table-action edit"
+                                onClick={() => openEditCardModal(card)}
+                                title="แก้ไขข้อมูลการ์ด"
+                              >
+                                <Edit3 size={13} />
+                                <span>แก้ไข</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-table-action delete"
+                                onClick={() => handleDeleteCard(card.id, card.title)}
+                                title="ลบการ์ด"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Cards Pagination Bar */}
+              {filteredCards.length > 0 && (
+                <div className="admin-table-pagination-bar">
+                  <div className="pagination-info">
+                    <span>
+                      แสดง <strong>{((safeCardPage - 1) * cardPageSize) + 1} - {Math.min(safeCardPage * cardPageSize, filteredCards.length)}</strong> จากทั้งหมด <strong>{filteredCards.length}</strong> รายการ
+                    </span>
+                    <div className="page-size-wrap">
+                      <span>แสดงหน้าละ:</span>
+                      <select 
+                        className="page-size-select"
+                        value={cardPageSize}
+                        onChange={(e) => {
+                          setCardPageSize(Number(e.target.value));
+                          setCardPage(1);
+                        }}
+                      >
+                        <option value={4}>4</option>
+                        <option value={8}>8</option>
+                        <option value={16}>16</option>
+                        <option value={32}>32</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {totalCardPages > 1 && (
+                    <div className="pagination-controls">
+                      <button
+                        type="button"
+                        className="btn-page-nav"
+                        disabled={safeCardPage <= 1}
+                        onClick={() => setCardPage(1)}
+                        title="หน้าแรกสุด"
+                      >
+                        <ChevronsLeft size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-page-nav"
+                        disabled={safeCardPage <= 1}
+                        onClick={() => setCardPage(p => Math.max(1, p - 1))}
+                        title="หน้าก่อนหน้า"
+                      >
+                        <ChevronLeft size={15} />
+                      </button>
+
+                      <div className="pagination-numbers">
+                        {getPageNumbers(safeCardPage, totalCardPages).map(pageNum => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            className={`btn-page-num ${pageNum === safeCardPage ? 'active' : ''}`}
+                            onClick={() => setCardPage(pageNum)}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn-page-nav"
+                        disabled={safeCardPage >= totalCardPages}
+                        onClick={() => setCardPage(p => Math.min(totalCardPages, p + 1))}
+                        title="หน้าถัดไป"
+                      >
+                        <ChevronRight size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-page-nav"
+                        disabled={safeCardPage >= totalCardPages}
+                        onClick={() => setCardPage(totalCardPages)}
+                        title="หน้าสุดท้าย"
+                      >
+                        <ChevronsRight size={15} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW 2: Cards Catalog Grid */}
+          {cardViewMode === 'cards' && (
+            <div className="admin-cards-catalog-grid animate-fade-in">
+              {filteredCards.map(card => (
+                <div key={card.id} className="admin-card-item-box">
+                  <div className="admin-card-thumb-wrap">
+                    <img src={card.coverImage} alt={card.title} className="admin-card-img" />
+                    <span className={`admin-card-status-badge ${card.status}`}>
+                      {card.status === 'available' ? 'มีสินค้า' : 'ขายแล้ว'}
+                    </span>
+                    <span className="admin-card-grade-badge">{card.grade || 'PCG 10'}</span>
+                  </div>
+
+                  <div className="admin-card-info-col">
+                    <h3 className="admin-card-title">{card.title}</h3>
+                    <span className="admin-card-sub">{card.subtitle}</span>
+                    <div className="admin-card-price-row">
+                      <span className="price-label">ราคา:</span>
+                      <span className="price-val">{Number(card.price || 0).toLocaleString()} ฿</span>
+                    </div>
+
+                    <div className="admin-card-meta-chips">
+                      <span className="meta-chip">
+                        <ImageIcon size={12} />
+                        <span>{card.detailImages ? card.detailImages.length : 1} รูปดีเทล</span>
+                      </span>
+                      {card.videoUrl && (
+                        <span className="meta-chip video">
+                          <Video size={12} />
+                          <span>มีวีดีโอ</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="admin-card-actions-row">
+                      <button
+                        type="button"
+                        className="btn-card-edit"
+                        onClick={() => openEditCardModal(card)}
+                      >
+                        <Edit3 size={14} />
+                        <span>แก้ไข</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-card-del"
+                        onClick={() => handleDeleteCard(card.id, card.title)}
+                      >
+                        <Trash2 size={14} />
+                        <span>ลบ</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
         </main>
       )}
@@ -1210,15 +2327,71 @@ export function AdminDashboard({
                 />
               </div>
 
+              {/* Cover Image Upload (เลือกจากไฟล์ในเครื่องหรือมือถือ) */}
               <div className="form-group">
-                <label className="form-lbl">เพิ่มรูป (URL รูปภาพ หรือปล่อยว่างเพื่อใช้สไตล์ Slab โทนม่วง)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="เช่น /graded-cards/pikachu_promo.png หรือลิงก์รูปภาพ"
-                  value={boardForm.coverImage}
-                  onChange={(e) => setBoardForm(prev => ({ ...prev, coverImage: e.target.value }))}
-                />
+                <label className="form-lbl">
+                  แนบรูปภาพกระดาน (เลือกจากเครื่อง / มือถือ หรือใส่ลิงก์)
+                </label>
+
+                <div className="file-uploader-box">
+                  <input
+                    type="file"
+                    id="board-cover-file-input"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleBoardFileSelect}
+                  />
+
+                  {boardForm.coverImage ? (
+                    <div className="uploaded-image-preview-card">
+                      <div className="preview-thumb-wrap">
+                        <img src={boardForm.coverImage} alt="Cover Preview" className="preview-img" />
+                      </div>
+                      <div className="preview-details">
+                        <span className="preview-success-txt">
+                          <CheckCircle size={14} /> เลือกรูปภาพเรียบร้อย
+                        </span>
+                        <div className="preview-actions-row">
+                          <label htmlFor="board-cover-file-input" className="btn-change-file">
+                            <Upload size={13} />
+                            <span>เปลี่ยนรูปใหม่</span>
+                          </label>
+                          <button
+                            type="button"
+                            className="btn-remove-file"
+                            onClick={() => setBoardForm(prev => ({ ...prev, coverImage: '' }))}
+                          >
+                            <Trash2 size={13} />
+                            <span>ลบรูป</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <label htmlFor="board-cover-file-input" className="dropzone-file-label">
+                      <div className="dropzone-inner">
+                        <div className="dropzone-icon-circle">
+                          <Upload size={22} />
+                        </div>
+                        <div className="dropzone-texts">
+                          <span className="dropzone-title">📁 คลิกเลือกรูปจากเครื่อง หรือถ่ายรูป/เลือกจากมือถือ</span>
+                          <span className="dropzone-sub">รองรับ JPG, PNG, WEBP (บีบอัดขนาดให้คมชัดอัตโนมัติ)</span>
+                        </div>
+                      </div>
+                    </label>
+                  )}
+                </div>
+
+                <div className="image-url-fallback-row">
+                  <span className="fallback-lbl">หรือใส่ลิงก์รูปภาพ:</span>
+                  <input
+                    type="text"
+                    className="form-input mini"
+                    placeholder="เช่น /graded-cards/pikachu_promo.png หรือ https://..."
+                    value={boardForm.coverImage}
+                    onChange={(e) => setBoardForm(prev => ({ ...prev, coverImage: e.target.value }))}
+                  />
+                </div>
               </div>
 
               <div className="form-row-2">
@@ -1342,23 +2515,89 @@ export function AdminDashboard({
                 </div>
               </div>
 
+              {/* Card Cover Image Upload */}
               <div className="form-group">
-                <label className="form-lbl">รูปปก (URL รูปภาพหลัก) <span className="req">*</span></label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="เช่น /graded-cards/pikachu_promo.png หรือลิงก์รูป"
-                  value={cardForm.coverImage}
-                  onChange={(e) => setCardForm(prev => ({ ...prev, coverImage: e.target.value }))}
-                  required
-                />
+                <label className="form-lbl">รูปปกการ์ด <span className="req">*</span></label>
+                <div className="file-uploader-box">
+                  <input
+                    type="file"
+                    id="card-cover-file-input"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleCardCoverFileSelect}
+                  />
+
+                  {cardForm.coverImage ? (
+                    <div className="uploaded-image-preview-card">
+                      <div className="preview-thumb-wrap">
+                        <img src={cardForm.coverImage} alt="Card Cover Preview" className="preview-img" />
+                      </div>
+                      <div className="preview-details">
+                        <span className="preview-success-txt">
+                          <CheckCircle size={14} /> เลือกรูปภาพปกเรียบร้อย
+                        </span>
+                        <div className="preview-actions-row">
+                          <label htmlFor="card-cover-file-input" className="btn-change-file">
+                            <Upload size={13} />
+                            <span>เปลี่ยนรูปใหม่</span>
+                          </label>
+                          <button
+                            type="button"
+                            className="btn-remove-file"
+                            onClick={() => setCardForm(prev => ({ ...prev, coverImage: '' }))}
+                          >
+                            <Trash2 size={13} />
+                            <span>ลบรูป</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <label htmlFor="card-cover-file-input" className="dropzone-file-label">
+                      <div className="dropzone-inner">
+                        <div className="dropzone-icon-circle">
+                          <Upload size={22} />
+                        </div>
+                        <div className="dropzone-texts">
+                          <span className="dropzone-title">📁 คลิกเลือกรูปปกจากเครื่อง หรือเลือกจากมือถือ</span>
+                          <span className="dropzone-sub">รองรับ JPG, PNG, WEBP</span>
+                        </div>
+                      </div>
+                    </label>
+                  )}
+                </div>
+
+                <div className="image-url-fallback-row">
+                  <span className="fallback-lbl">หรือใส่ลิงก์รูปภาพ:</span>
+                  <input
+                    type="text"
+                    className="form-input mini"
+                    placeholder="เช่น /graded-cards/pikachu_promo.png หรือ https://..."
+                    value={cardForm.coverImage}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, coverImage: e.target.value }))}
+                  />
+                </div>
               </div>
 
+              {/* Card Detail Images Upload */}
               <div className="form-group">
-                <label className="form-lbl">
-                  รูปดีเทลยิบย่อย (รูปภาพเพิ่มเติมหลายๆ มุม)
-                  <span className="lbl-hint">(ใส่ลิงก์รูปภาพ คั่นด้วยการขึ้นบรรทัดใหม่ หรือจุลภาค)</span>
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
+                  <label className="form-lbl" style={{ margin: 0 }}>
+                    รูปดีเทลยิบย่อย (รูปภาพเพิ่มเติมหลายๆ มุม)
+                  </label>
+                  <label htmlFor="card-details-files-input" className="btn-upload-more-files">
+                    <Upload size={13} />
+                    <span>+ เลือกรูปเพิ่มจากเครื่อง/มือถือ</span>
+                  </label>
+                  <input
+                    type="file"
+                    id="card-details-files-input"
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleCardDetailFilesSelect}
+                  />
+                </div>
                 <textarea
                   className="form-input textarea"
                   rows="3"
@@ -1453,6 +2692,71 @@ export function AdminDashboard({
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          SUPABASE SETUP GUIDE MODAL
+          ========================================================================= */}
+      {isSupabaseModalOpen && (
+        <div className="admin-modal-overlay animate-fade-in" onClick={() => setIsSupabaseModalOpen(false)}>
+          <div className="admin-modal-content supabase-setup-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <div className="modal-title-with-icon">
+                <Database className="title-icon-purple" size={20} />
+                <h3 className="admin-modal-title">ตั้งค่าเชื่อมต่อ Supabase Cloud Database</h3>
+              </div>
+              <button type="button" className="btn-modal-close" onClick={() => setIsSupabaseModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="supabase-guide-body">
+              <p className="supabase-guide-intro">
+                เมื่อเชื่อมต่อ Supabase แล้ว ข้อมูลการจองเบอร์ การ์ด และการตั้งค่าทั้งหมดจะถูกบันทึกขึ้น Cloud และซิงค์ข้ามเครื่อง (มือถือ/คอมพิวเตอร์/ลูกค้าทุกคน) แบบ <strong>Real-time ทันที</strong>
+              </p>
+
+              <div className="setup-steps-list">
+                <div className="setup-step-item">
+                  <div className="step-num">1</div>
+                  <div className="step-content">
+                    <h4>สร้างโปรเจกต์ Supabase ฟรี</h4>
+                    <p>ไปที่ <a href="https://supabase.com" target="_blank" rel="noreferrer" className="supabase-link">supabase.com</a> ล็อกอินแล้วกด <strong>"New Project"</strong> ตั้งชื่อโปรเจกต์และรหัสผ่านฐานข้อมูล</p>
+                  </div>
+                </div>
+
+                <div className="setup-step-item">
+                  <div className="step-num">2</div>
+                  <div className="step-content">
+                    <h4>รันคำสั่งสร้างตาราง (SQL Script)</h4>
+                    <p>เปิดเมนู <strong>SQL Editor</strong> ใน Supabase แล้วเปิดไฟล์ <code className="code-pill">supabase_schema.sql</code> ที่เตรียมไว้ในโฟลเดอร์โปรเจกต์นี้ คัดลอกข้อความทั้งหมดไปวางแล้วกด <strong>"Run"</strong></p>
+                  </div>
+                </div>
+
+                <div className="setup-step-item">
+                  <div className="step-num">3</div>
+                  <div className="step-content">
+                    <h4>ใส่ค่าเชื่อมต่อ (API Keys)</h4>
+                    <p>ไปที่ <strong>Project Settings → API</strong> แล้วคัดลอกค่า <strong>Project URL</strong> และ <strong>anon public key</strong> มาใส่ใน:</p>
+                    <ul className="setup-sub-list">
+                      <li>ไฟล์ <code className="code-pill">.env</code> ในโปรเจกต์ (สำหรับรันบนเครื่อง)</li>
+                      <li>หรือใน <strong>Vercel Dashboard → Settings → Environment Variables</strong> (สำหรับเว็บที่ขึ้นออนไลน์)</li>
+                    </ul>
+                    <div className="env-sample-box">
+                      <code>VITE_SUPABASE_URL=https://your-id.supabase.co<br />VITE_SUPABASE_ANON_KEY=your-anon-key</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-actions-bar" style={{ marginTop: '24px' }}>
+                <button type="button" className="btn-modal-save" onClick={() => setIsSupabaseModalOpen(false)}>
+                  <Check size={16} />
+                  <span>เข้าใจแล้ว</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

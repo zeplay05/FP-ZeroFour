@@ -15,6 +15,16 @@ import {
   generateNumbersWithPreset 
 } from './utils/lotteryData';
 import { initialStoreCards } from './utils/storeCardsData';
+import {
+  isSupabaseConfigured,
+  fetchRoundsFromSupabase,
+  fetchStoreCardsFromSupabase,
+  syncRoundsWithSupabase,
+  syncStoreCardsWithSupabase,
+  fetchSettingFromSupabase,
+  subscribeToRealtimeRounds,
+  subscribeToRealtimeStoreCards
+} from './utils/supabaseClient';
 import confetti from 'canvas-confetti';
 import './App.css';
 
@@ -100,6 +110,89 @@ function App() {
 
   // Active round object
   const currentRound = rounds.find(r => r.id === currentRoundId) || rounds[0] || initialLotteryRounds[0];
+
+  // Supabase Cloud Data Initial Load & Realtime Subscriptions
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    let isMounted = true;
+    async function loadCloudData() {
+      try {
+        const [cloudRounds, cloudCards, cloudFbLink] = await Promise.all([
+          fetchRoundsFromSupabase(),
+          fetchStoreCardsFromSupabase(),
+          fetchSettingFromSupabase('seller_fb_link')
+        ]);
+
+        if (isMounted) {
+          if (cloudRounds && cloudRounds.length > 0) {
+            setRounds(cloudRounds);
+          } else if (cloudRounds && cloudRounds.length === 0 && rounds.length > 0) {
+            // First time setup on clean Supabase database: auto-seed existing rounds
+            syncRoundsWithSupabase(rounds).catch(console.error);
+          }
+
+          if (cloudCards && cloudCards.length > 0) {
+            setStoreCards(cloudCards);
+          } else if (cloudCards && cloudCards.length === 0 && storeCards.length > 0) {
+            // First time setup on clean Supabase database: auto-seed existing store cards
+            syncStoreCardsWithSupabase(storeCards).catch(console.error);
+          }
+
+          if (cloudFbLink) {
+            localStorage.setItem('seller_fb_link', cloudFbLink);
+          }
+        }
+      } catch (err) {
+        console.error('[Supabase] Initial load error:', err);
+      }
+    }
+
+    loadCloudData();
+
+    // Listen to real-time changes across devices
+    const unsubRounds = subscribeToRealtimeRounds(async () => {
+      const freshRounds = await fetchRoundsFromSupabase();
+      if (freshRounds && isMounted) {
+        setRounds(freshRounds);
+      }
+    });
+
+    const unsubCards = subscribeToRealtimeStoreCards(async () => {
+      const freshCards = await fetchStoreCardsFromSupabase();
+      if (freshCards && isMounted) {
+        setStoreCards(freshCards);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubRounds();
+      unsubCards();
+    };
+  }, []);
+
+  // Update rounds with Supabase Cloud Sync
+  const handleUpdateRounds = (newRoundsOrUpdater) => {
+    setRounds(prev => {
+      const nextRounds = typeof newRoundsOrUpdater === 'function' ? newRoundsOrUpdater(prev) : newRoundsOrUpdater;
+      if (isSupabaseConfigured()) {
+        syncRoundsWithSupabase(nextRounds, prev).catch(console.error);
+      }
+      return nextRounds;
+    });
+  };
+
+  // Update store cards with Supabase Cloud Sync
+  const handleUpdateStoreCards = (newCardsOrUpdater) => {
+    setStoreCards(prev => {
+      const nextCards = typeof newCardsOrUpdater === 'function' ? newCardsOrUpdater(prev) : newCardsOrUpdater;
+      if (isSupabaseConfigured()) {
+        syncStoreCardsWithSupabase(nextCards, prev).catch(console.error);
+      }
+      return nextCards;
+    });
+  };
 
   // Persist rounds to localStorage whenever updated
   useEffect(() => {
@@ -193,7 +286,7 @@ function App() {
 
   // Add a newly created round -> Navigate to ?card=<newRound.id>
   const handleCreateRound = (newRound) => {
-    setRounds(prev => [newRound, ...prev]); // Prepend so it is #1 (latest first)
+    handleUpdateRounds(prev => [newRound, ...prev]); // Prepend so it is #1 (latest first)
     setCurrentRoundId(newRound.id);
     setViewMode('board');
     setActiveTab('cards');
@@ -204,14 +297,14 @@ function App() {
 
   // Delete a round
   const handleDeleteRound = (roundId) => {
-    setRounds(prev => prev.filter(r => r.id !== roundId));
+    handleUpdateRounds(prev => prev.filter(r => r.id !== roundId));
     handleBackToGallery();
     setActiveTab('cards');
   };
 
   // Update round bookings and numbers
   const handleUpdateRoundBookings = (roundId, newNumbers, newBookings) => {
-    setRounds(prev => prev.map(r => {
+    handleUpdateRounds(prev => prev.map(r => {
       if (r.id === roundId) {
         return {
           ...r,
@@ -229,9 +322,9 @@ function App() {
       <div className="lottery-app admin-portal-page">
         <AdminDashboard
           rounds={rounds}
-          onUpdateRounds={setRounds}
+          onUpdateRounds={handleUpdateRounds}
           storeCards={storeCards}
-          onUpdateStoreCards={setStoreCards}
+          onUpdateStoreCards={handleUpdateStoreCards}
           onExitAdmin={handleNavHome}
         />
       </div>

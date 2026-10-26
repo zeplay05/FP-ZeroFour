@@ -15,6 +15,39 @@ const GRADIENT_OPTIONS = [
   { id: 'amber', name: 'ทองอำพัน (เมืองเก่า)', color: '#f59e0b' }
 ];
 
+function processImageFile(file, maxWidth = 1000, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+      return resolve(null);
+    }
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
   const [title, setTitle] = useState('');
   const [gradient, setGradient] = useState('lime');
@@ -25,14 +58,15 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
 
   if (!isOpen) return null;
 
-  const handleCustomImageUpload = (e) => {
+  const handleCustomImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setCoverImage(event.target.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const base64 = await processImageFile(file);
+      if (base64) setCoverImage(base64);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleSubmit = (e) => {
