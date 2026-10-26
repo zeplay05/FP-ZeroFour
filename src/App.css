@@ -2070,8 +2070,8 @@ body {
   .round-main-layout {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 14px 12px 40px;
+    gap: 18px;
+    padding: 16px 14px 40px;
     width: 100%;
     box-sizing: border-box;
   }
@@ -2091,9 +2091,12 @@ body {
     padding: 4px 12px;
   }
   .round-slab-art-container {
-    aspect-ratio: 16 / 10;
-    max-height: 220px;
-    border-radius: 14px;
+    width: 100%;
+    aspect-ratio: auto;
+    max-height: 380px;
+    border-radius: 16px;
+    padding: 10px;
+    box-sizing: border-box;
   }
   .slab-inner-card {
     width: 108px;
@@ -2272,29 +2275,35 @@ body {
 /* Slab Graphic Box (PSA 10 Card Display Case) */
 .round-slab-art-container {
   width: 100%;
-  aspect-ratio: 1.05 / 1;
-  max-height: 440px;
+  aspect-ratio: auto;
+  max-height: 480px;
   border-radius: 18px;
   overflow: hidden;
-  background: linear-gradient(145deg, #1e1b4b 0%, #312e81 45%, #180d38 100%);
+  background: linear-gradient(145deg, #18153b 0%, #25225c 45%, #130b2e 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
   position: relative;
+  padding: 12px;
+  box-sizing: border-box;
 }
 .round-slab-art-container::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+  background: radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
   pointer-events: none;
 }
 .slab-img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  max-height: 450px;
+  object-fit: contain;
+  border-radius: 12px;
+  display: block;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 .slab-card-placeholder {
   width: 100%;
@@ -10949,7 +10958,7 @@ body {
 
   /* Round Detail Layout */
   .round-main-layout {
-    padding: 12px 10px 30px;
+    padding: 16px 14px 40px;
     gap: 16px;
   }
 
