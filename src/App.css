@@ -2897,23 +2897,26 @@ body {
   justify-content: center;
   gap: 10px;
   width: 100%;
+  min-height: 54px;
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #4338ca 100%);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 14px;
-  padding: 13px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
+  padding: 16px 24px;
   font-family: var(--font-thai);
-  font-size: 14.5px;
+  font-size: 16px;
   font-weight: 800;
+  letter-spacing: 0.3px;
   cursor: pointer;
-  margin-top: 4px;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: 14px 0 10px;
+  box-shadow: 0 8px 26px rgba(37, 99, 235, 0.4), 0 0 16px rgba(59, 130, 246, 0.25);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 .btn-banner-select-chat:hover {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #4f46e5 100%);
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.48);
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.55), 0 0 20px rgba(59, 130, 246, 0.35);
 }
 
 /* Modal Overlay Backdrop */
@@ -11165,8 +11168,10 @@ body {
   }
 
   .btn-banner-select-chat {
-    font-size: 13.5px;
-    padding: 12px 14px;
+    font-size: 15.5px !important;
+    padding: 16px 22px !important;
+    min-height: 52px !important;
+    border-radius: 14px !important;
     line-height: 1.35;
     text-align: center;
   }
@@ -11216,8 +11221,10 @@ body {
   }
 
   .btn-banner-select-chat {
-    font-size: 12.5px;
-    padding: 10px 12px;
+    font-size: 15px !important;
+    padding: 15px 18px !important;
+    min-height: 50px !important;
+    border-radius: 14px !important;
   }
 }
 
