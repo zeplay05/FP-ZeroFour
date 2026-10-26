@@ -174,7 +174,7 @@ export function RoundDetailPage({
               onClick={() => setIsRemainingModalOpen(true)}
             >
               <MessageCircle size={18} />
-              <span>เลือกเลขที่ต้องการ แล้วเด้งไปแชทเฟส ({availableNumbers.length} เบอร์ว่าง)</span>
+              <span>เลือกเลขที่ต้องการ({availableNumbers.length} เบอร์ว่าง)</span>
             </button>
           )}
 
