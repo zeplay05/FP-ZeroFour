@@ -44,7 +44,8 @@ import {
   isSupabaseConfigured, 
   syncRoundsWithSupabase, 
   syncStoreCardsWithSupabase, 
-  saveSettingToSupabase 
+  saveSettingToSupabase,
+  deleteRoundFromSupabase
 } from '../utils/supabaseClient';
 
 // Compress and convert selected file to base64 Data URL (optimizes size for localStorage & fast loading)
@@ -439,8 +440,11 @@ export function AdminDashboard({
     setIsBoardModalOpen(false);
   };
 
-  const handleDeleteBoard = (boardId, boardTitle) => {
+  const handleDeleteBoard = async (boardId, boardTitle) => {
     if (confirm(`คุณต้องการลบกระดาน "${boardTitle}" ใช่หรือไม่?`)) {
+      if (isSupabaseConfigured()) {
+        await deleteRoundFromSupabase(boardId).catch(console.error);
+      }
       const filtered = rounds.filter(r => r.id !== boardId);
       onUpdateRounds(filtered);
       if (selectedBoardId === boardId) {

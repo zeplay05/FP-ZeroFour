@@ -23,7 +23,8 @@ import {
   syncStoreCardsWithSupabase,
   fetchSettingFromSupabase,
   subscribeToRealtimeRounds,
-  subscribeToRealtimeStoreCards
+  subscribeToRealtimeStoreCards,
+  deleteRoundFromSupabase
 } from './utils/supabaseClient';
 import confetti from 'canvas-confetti';
 import './App.css';
@@ -194,22 +195,10 @@ function App() {
         if (isMounted) {
           if (cloudRounds && cloudRounds.length > 0) {
             const { rounds: migratedCloud, changed } = normalizeAndMigrateRounds(cloudRounds);
-            setRounds(currentLocal => {
-              const cloudIds = new Set(migratedCloud.map(r => r.id));
-              const unsyncedLocals = currentLocal.filter(r => !cloudIds.has(r.id) && (r.id.startsWith('board-') || r.id.startsWith('card-')));
-              
-              if (unsyncedLocals.length > 0) {
-                console.log('[Supabase] Preserving unsynced local rounds and uploading:', unsyncedLocals.length);
-                const merged = [...unsyncedLocals, ...migratedCloud];
-                syncRoundsWithSupabase(merged).catch(console.error);
-                return merged;
-              }
-
-              if (changed) {
-                syncRoundsWithSupabase(migratedCloud).catch(console.error);
-              }
-              return migratedCloud;
-            });
+            setRounds(migratedCloud);
+            if (changed) {
+              syncRoundsWithSupabase(migratedCloud).catch(console.error);
+            }
           } else if (cloudRounds && cloudRounds.length === 0 && rounds.length > 0) {
             // First time setup on clean Supabase database: auto-seed existing rounds
             syncRoundsWithSupabase(rounds).catch(console.error);
@@ -238,14 +227,7 @@ function App() {
       const freshRounds = await fetchRoundsFromSupabase();
       if (freshRounds && isMounted) {
         const { rounds: migratedFresh } = normalizeAndMigrateRounds(freshRounds);
-        setRounds(currentLocal => {
-          const cloudIds = new Set(migratedFresh.map(r => r.id));
-          const unsyncedLocals = currentLocal.filter(r => !cloudIds.has(r.id) && (r.id.startsWith('board-') || r.id.startsWith('card-')));
-          if (unsyncedLocals.length > 0) {
-            return [...unsyncedLocals, ...migratedFresh];
-          }
-          return migratedFresh;
-        });
+        setRounds(migratedFresh);
       }
     });
 
@@ -395,7 +377,10 @@ function App() {
   };
 
   // Delete a round
-  const handleDeleteRound = (roundId) => {
+  const handleDeleteRound = async (roundId) => {
+    if (isSupabaseConfigured()) {
+      await deleteRoundFromSupabase(roundId).catch(console.error);
+    }
     handleUpdateRounds(prev => prev.filter(r => r.id !== roundId));
     handleBackToGallery();
     setActiveTab('cards');
