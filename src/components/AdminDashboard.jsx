@@ -868,16 +868,65 @@ export function AdminDashboard({
 
       {/* Admin Header */}
       <header className="admin-top-navbar">
-        <div className="admin-brand-left">
-          <button
-            type="button"
-            className="brand-logo-btn"
-            onClick={onExitAdmin}
-            title="กลับไปที่หน้าหลักร้านค้า"
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-          >
-            <span className="brand-logo-futuristic">FP ZEROFOUR</span>
-          </button>
+        <div className="admin-navbar-main-row">
+          <div className="admin-brand-left">
+            <button
+              type="button"
+              className="brand-logo-btn"
+              onClick={onExitAdmin}
+              title="กลับไปที่หน้าหลักร้านค้า"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            >
+              <span className="brand-logo-futuristic">FP ZEROFOUR</span>
+            </button>
+          </div>
+
+          {/* Exit & Logout Buttons */}
+          <div className="admin-actions-right">
+            {/* Supabase Cloud Connection & Sync Status */}
+            {isSupabaseConfigured() ? (
+              <button
+                type="button"
+                className="btn-supabase-status connected"
+                onClick={handleManualCloudSync}
+                disabled={isSyncingCloud}
+                title="เชื่อมต่อ Supabase สำเร็จ (กดเพื่อบังคับซิงค์ข้อมูลทั้งหมดขึ้น Cloud)"
+              >
+                <Database size={15} />
+                <span>{isSyncingCloud ? 'กำลังซิงค์...' : 'Supabase Cloud'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-supabase-status offline"
+                onClick={() => setIsSupabaseModalOpen(true)}
+                title="กดเพื่อดูวิธีตั้งค่าเชื่อมต่อ Supabase ฟรี"
+              >
+                <Database size={15} />
+                <span>ใช้ Supabase</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="btn-admin-exit-shop"
+              onClick={onExitAdmin}
+              title="กลับไปที่หน้าหลักร้านค้า"
+            >
+              <ArrowLeft size={16} />
+              <span>หน้าร้าน</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-admin-logout"
+              onClick={handleLogout}
+              title="ออกจากระบบหลังบ้าน"
+            >
+              <Lock size={15} />
+              <span>ออก</span>
+            </button>
+          </div>
         </div>
 
         {/* Tab Switcher */}
@@ -907,53 +956,6 @@ export function AdminDashboard({
           >
             <Music size={17} />
             <span>3. จัดการเพลงพื้นหลัง</span>
-          </button>
-        </div>
-
-        {/* Exit & Logout Buttons */}
-        <div className="admin-actions-right">
-          {/* Supabase Cloud Connection & Sync Status */}
-          {isSupabaseConfigured() ? (
-            <button
-              type="button"
-              className="btn-supabase-status connected"
-              onClick={handleManualCloudSync}
-              disabled={isSyncingCloud}
-              title="เชื่อมต่อ Supabase สำเร็จ (กดเพื่อบังคับซิงค์ข้อมูลทั้งหมดขึ้น Cloud)"
-            >
-              <Database size={15} />
-              <span>{isSyncingCloud ? 'กำลังซิงค์ Cloud...' : 'Supabase Cloud'}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn-supabase-status offline"
-              onClick={() => setIsSupabaseModalOpen(true)}
-              title="กดเพื่อดูวิธีตั้งค่าเชื่อมต่อ Supabase ฟรี"
-            >
-              <Database size={15} />
-              <span>ใช้ Supabase</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            className="btn-admin-exit-shop"
-            onClick={onExitAdmin}
-            title="กลับไปที่หน้าหลักร้านค้า"
-          >
-            <ArrowLeft size={16} />
-            <span>กลับสู่หน้าร้าน</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-admin-logout"
-            onClick={handleLogout}
-            title="ออกจากระบบหลังบ้าน"
-          >
-            <Lock size={15} />
-            <span>ออกจากระบบ</span>
           </button>
         </div>
       </header>
