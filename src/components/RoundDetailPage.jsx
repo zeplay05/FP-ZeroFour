@@ -173,8 +173,7 @@ export function RoundDetailPage({
               className="btn-banner-select-chat"
               onClick={() => setIsRemainingModalOpen(true)}
             >
-              <MessageCircle size={18} />
-              <span>เลือกเลขที่ต้องการ({availableNumbers.length} เบอร์ว่าง)</span>
+              <span>เลือกเลขที่ต้องการ</span>
             </button>
           )}
 
