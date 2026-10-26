@@ -194,10 +194,22 @@ function App() {
         if (isMounted) {
           if (cloudRounds && cloudRounds.length > 0) {
             const { rounds: migratedCloud, changed } = normalizeAndMigrateRounds(cloudRounds);
-            setRounds(migratedCloud);
-            if (changed) {
-              syncRoundsWithSupabase(migratedCloud).catch(console.error);
-            }
+            setRounds(currentLocal => {
+              const cloudIds = new Set(migratedCloud.map(r => r.id));
+              const unsyncedLocals = currentLocal.filter(r => !cloudIds.has(r.id) && (r.id.startsWith('board-') || r.id.startsWith('card-')));
+              
+              if (unsyncedLocals.length > 0) {
+                console.log('[Supabase] Preserving unsynced local rounds and uploading:', unsyncedLocals.length);
+                const merged = [...unsyncedLocals, ...migratedCloud];
+                syncRoundsWithSupabase(merged).catch(console.error);
+                return merged;
+              }
+
+              if (changed) {
+                syncRoundsWithSupabase(migratedCloud).catch(console.error);
+              }
+              return migratedCloud;
+            });
           } else if (cloudRounds && cloudRounds.length === 0 && rounds.length > 0) {
             // First time setup on clean Supabase database: auto-seed existing rounds
             syncRoundsWithSupabase(rounds).catch(console.error);
@@ -225,7 +237,15 @@ function App() {
     const unsubRounds = subscribeToRealtimeRounds(async () => {
       const freshRounds = await fetchRoundsFromSupabase();
       if (freshRounds && isMounted) {
-        setRounds(freshRounds);
+        const { rounds: migratedFresh } = normalizeAndMigrateRounds(freshRounds);
+        setRounds(currentLocal => {
+          const cloudIds = new Set(migratedFresh.map(r => r.id));
+          const unsyncedLocals = currentLocal.filter(r => !cloudIds.has(r.id) && (r.id.startsWith('board-') || r.id.startsWith('card-')));
+          if (unsyncedLocals.length > 0) {
+            return [...unsyncedLocals, ...migratedFresh];
+          }
+          return migratedFresh;
+        });
       }
     });
 

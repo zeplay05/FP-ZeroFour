@@ -35,40 +35,57 @@ export const supabase = isSupabaseConfigured()
 /**
  * Map Supabase database row to frontend round object
  */
-const mapDbToRound = (row) => ({
-  id: row.id,
-  title: row.title || '',
-  roundName: row.round_name || row.title || '',
-  description: row.description || '',
-  pricePerNumber: Number(row.price_per_number) || 0,
-  coverImage: row.cover_image || null,
-  gradient: row.gradient || 'indigo',
-  theme: row.theme || 'neon',
-  createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-  status: row.status || 'open',
-  winningNumber: row.winning_number || '',
-  numbers: Array.isArray(row.numbers) ? row.numbers : [],
-  bookings: Array.isArray(row.bookings) ? row.bookings : []
-});
+const mapDbToRound = (row) => {
+  let parsedMeta = null;
+  if (row.round_name && typeof row.round_name === 'string' && row.round_name.startsWith('{')) {
+    try {
+      parsedMeta = JSON.parse(row.round_name);
+    } catch (e) {}
+  }
+
+  return {
+    id: row.id,
+    title: row.title || '',
+    roundName: parsedMeta?.name || row.round_name || row.title || '',
+    description: parsedMeta?.desc || row.description || '',
+    boardType: parsedMeta?.boardType || 'duck',
+    pricePerNumber: Number(row.price_per_number) || 0,
+    coverImage: row.cover_image || null,
+    gradient: row.gradient || 'indigo',
+    theme: row.theme || 'neon',
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+    status: row.status || 'open',
+    winningNumber: row.winning_number || '',
+    numbers: Array.isArray(row.numbers) ? row.numbers : [],
+    bookings: Array.isArray(row.bookings) ? row.bookings : []
+  };
+};
 
 /**
  * Map frontend round object to Supabase database row
  */
-const mapRoundToDb = (round) => ({
-  id: round.id,
-  title: round.title || round.roundName || '',
-  round_name: round.roundName || round.title || '',
-  description: round.description || '',
-  price_per_number: Number(round.pricePerNumber) || 0,
-  cover_image: round.coverImage || null,
-  gradient: round.gradient || 'indigo',
-  theme: round.theme || 'neon',
-  status: round.status || 'open',
-  winning_number: round.winningNumber || '',
-  numbers: round.numbers || [],
-  bookings: round.bookings || [],
-  updated_at: new Date().toISOString()
-});
+const mapRoundToDb = (round) => {
+  const roundNamePayload = JSON.stringify({
+    name: round.roundName || round.title || '',
+    desc: round.description || '',
+    boardType: round.boardType || 'duck'
+  });
+
+  return {
+    id: round.id,
+    title: round.title || round.roundName || '',
+    round_name: roundNamePayload,
+    price_per_number: Number(round.pricePerNumber) || 0,
+    cover_image: round.coverImage || null,
+    gradient: round.gradient || 'indigo',
+    theme: round.theme || 'neon',
+    status: round.status || 'open',
+    winning_number: round.winningNumber || '',
+    numbers: Array.isArray(round.numbers) ? round.numbers : [],
+    bookings: Array.isArray(round.bookings) ? round.bookings : [],
+    updated_at: new Date().toISOString()
+  };
+};
 
 /**
  * Map Supabase database row to frontend store card object
