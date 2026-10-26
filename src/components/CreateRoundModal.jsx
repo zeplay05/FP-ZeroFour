@@ -182,6 +182,29 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
           </div>
 
 
+          {/* Board Type Selection (ระบบประเภทกระดาน & ส่วนลด) */}
+          <div className="form-group">
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+              🎯 เลือกประเภทกระดาน (โปรโมชั่นส่วนลด):
+            </label>
+            <div className="board-type-select-grid">
+              {Object.values(BOARD_TYPES).map((bt) => (
+                <button
+                  key={bt.id}
+                  type="button"
+                  className={`board-type-pill-btn ${boardType === bt.id ? 'active' : ''}`}
+                  onClick={() => setBoardType(bt.id)}
+                >
+                  <span className="bt-icon">{bt.icon}</span>
+                  <div className="bt-text-wrap">
+                    <span className="bt-name">{bt.name}</span>
+                    <span className="bt-promo">{bt.promoText}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Price per number */}
           <div className="form-row">
             <div className="form-group flex-1">

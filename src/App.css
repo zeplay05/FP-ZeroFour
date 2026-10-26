@@ -1976,6 +1976,84 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Board Type Selection Grid */
+.board-type-select-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+@media (max-width: 580px) {
+  .board-type-select-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.board-type-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(14, 11, 35, 0.75);
+  border: 1.5px solid rgba(139, 92, 246, 0.25);
+  border-radius: 12px;
+  color: #cbd5e1;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--font-thai);
+  box-sizing: border-box;
+}
+
+.board-type-pill-btn:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
+}
+
+.board-type-pill-btn.active {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35) 0%, rgba(99, 102, 241, 0.3) 100%);
+  border-color: #a855f7;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.38);
+}
+
+.board-type-pill-btn .bt-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.board-type-pill-btn .bt-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.board-type-pill-btn .bt-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.board-type-pill-btn .bt-promo {
+  font-size: 11px;
+  font-weight: 500;
+  color: #a78bfa;
+  white-space: nowrap;
+}
+
+.board-type-pill-btn.active .bt-promo {
+  color: #fbbf24;
+}
+
+.board-type-select-grid.admin-compact .board-type-pill-btn {
+  padding: 8px 10px;
+}
+
 /* Breadcrumb inside board view */
 .board-breadcrumb-bar {
   max-width: 820px;
@@ -2673,6 +2751,21 @@ body {
   font-weight: 700;
   font-size: 15px;
   color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.history-fb-prefix {
+  font-weight: 500;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.history-fb-val {
+  font-weight: 700;
+  font-size: 15.5px;
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
 }
 .history-card-nums {
   font-weight: 600;
@@ -4967,7 +5060,9 @@ body {
 
 .open-boards-cards-grid {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
   width: 100%;
 }
 
@@ -5159,6 +5254,8 @@ body {
   align-items: center;
   gap: 6px;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .dot-pulse-mini {
@@ -5179,6 +5276,8 @@ body {
   padding: 4px 12px;
   border-radius: 20px;
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.28);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .open-board-title {
@@ -5271,15 +5370,26 @@ body {
 }
 
 @media (max-width: 680px) {
-  .open-board-inner-container {
+  .open-boards-cards-grid {
     flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+  }
+  .open-board-spotlight-card {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .open-board-inner-container {
+    flex-direction: column !important;
+    width: 100%;
   }
   .open-board-media-box {
     width: 100%;
     min-width: unset;
     height: auto;
-    min-height: 260px;
-    max-height: 380px;
+    min-height: 200px;
+    max-height: 320px;
     padding: 16px 14px;
     border-right: none;
     border-bottom: 1px solid rgba(139, 92, 246, 0.2);
@@ -5290,11 +5400,41 @@ body {
   .open-board-custom-img {
     width: 100%;
     height: auto;
-    max-height: 320px;
+    max-height: 280px;
     object-fit: contain;
+  }
+  .open-board-body {
+    padding: 18px 16px;
+    gap: 12px;
+  }
+  .open-board-badges-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .badge-status-pill.open-live {
+    white-space: nowrap !important;
+    flex-shrink: 0;
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+  .badge-price-pill.highlight-gold {
+    white-space: nowrap !important;
+    flex-shrink: 0;
+    padding: 5px 14px;
+    font-size: 13.5px;
   }
   .open-board-title {
     white-space: normal;
+    word-break: break-word;
+    font-size: 18px;
+    line-height: 1.4;
+  }
+  .btn-select-board-cta {
+    white-space: nowrap;
+    width: 100%;
+    justify-content: center;
+    padding: 12px 18px;
+    font-size: 14px;
   }
 }
 
@@ -7774,6 +7914,8 @@ body {
   display: flex;
   justify-content: flex-start;
   padding-top: 14px;
+  padding-bottom: max(36px, env(safe-area-inset-bottom, 24px));
+  margin-bottom: 24px;
 }
 
 /* --------------------------------------------------------------------------
@@ -7886,6 +8028,8 @@ body {
   gap: 24px;
   align-items: start;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
@@ -7904,6 +8048,10 @@ body {
   padding: 24px;
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .admin-visual-grid-box {
@@ -7979,6 +8127,14 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .status-radio-group {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 
 .radio-pill {
@@ -7997,6 +8153,7 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .radio-pill input[type="radio"] {
@@ -8039,6 +8196,10 @@ body {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
   margin-top: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  text-align: center;
 }
 
 .btn-submit-booking:hover {
@@ -8056,6 +8217,10 @@ body {
   gap: 12px;
   border-top: 1px solid rgba(139, 92, 246, 0.18);
   padding-top: 20px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .table-heading-title {
@@ -8078,9 +8243,13 @@ body {
 
 .admin-table-container {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: 12px;
   border: 1px solid rgba(139, 92, 246, 0.2);
   background: rgba(9, 7, 26, 0.7);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .admin-data-table {

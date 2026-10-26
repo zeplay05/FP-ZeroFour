@@ -497,6 +497,7 @@ export function AdminDashboard({
     const newBooking = {
       id: bookingId,
       customerName: fbName,
+      facebookName: fbName,
       numbers: validNums,
       status: bookingForm.status, // 'booked' หรือ 'paid'
       createdAt: Date.now()
@@ -509,6 +510,7 @@ export function AdminDashboard({
           ...item,
           status: bookingForm.status,
           customerName: fbName,
+          facebookName: fbName,
           bookingId: bookingId
         };
       }
@@ -2351,6 +2353,27 @@ export function AdminDashboard({
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Board Type Selection (ระบบประเภทกระดาน & ส่วนลด) */}
+              <div className="form-group">
+                <label className="form-lbl">🎯 ประเภทกระดาน (โปรโมชั่นส่วนลด)</label>
+                <div className="board-type-select-grid admin-compact">
+                  {Object.values(BOARD_TYPES).map((bt) => (
+                    <button
+                      key={bt.id}
+                      type="button"
+                      className={`board-type-pill-btn ${boardForm.boardType === bt.id ? 'active' : ''}`}
+                      onClick={() => setBoardForm(prev => ({ ...prev, boardType: bt.id }))}
+                    >
+                      <span className="bt-icon">{bt.icon}</span>
+                      <div className="bt-text-wrap">
+                        <span className="bt-name">{bt.name}</span>
+                        <span className="bt-promo">{bt.promoText}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="form-row-2">

@@ -49,8 +49,11 @@ export function RoundDetailPage({
     if (!historySearch.trim()) return sorted;
     const q = historySearch.toLowerCase().trim();
     return sorted.filter(b => {
-      const matchName = b.facebookName.toLowerCase().includes(q);
-      const matchNums = b.numbers.some(n => n.includes(q)) || b.numbers.join('-').includes(q);
+      const custName = b.customerName || b.facebookName || '';
+      const matchName = custName.toLowerCase().includes(q);
+      const matchNums = Array.isArray(b.numbers)
+        ? (b.numbers.some(n => String(n).includes(q)) || b.numbers.join('-').includes(q))
+        : String(b.numbers || '').includes(q);
       return matchName || matchNums;
     });
   }, [bookings, historySearch]);
@@ -171,7 +174,7 @@ export function RoundDetailPage({
               onClick={() => setIsRemainingModalOpen(true)}
             >
               <MessageCircle size={18} />
-              <span>เลือกเบอร์ที่ยังไม่ออก แล้วเด้งไปแชทเฟส ({availableNumbers.length} เบอร์ว่าง)</span>
+              <span>เลือกเลขที่ต้องการ แล้วเด้งไปแชทเฟส ({availableNumbers.length} เบอร์ว่าง)</span>
             </button>
           )}
 
@@ -229,7 +232,8 @@ export function RoundDetailPage({
                     <div key={b.id} className="history-item-card">
                       <div className="history-card-header">
                         <span className="history-fb-name">
-                          ชื่อเฟส {b.facebookName}
+                          <span className="history-fb-prefix">ชื่อเฟส : </span>
+                          <span className="history-fb-val">{b.customerName || b.facebookName || 'ลูกค้าไม่ระบุชื่อ'}</span>
                         </span>
                       </div>
 
