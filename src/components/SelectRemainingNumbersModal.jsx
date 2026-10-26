@@ -178,65 +178,39 @@ export function SelectRemainingNumbersModal({
           </button>
         </div>
 
-        {/* Quick Toolbar (Random Pick, Search, Clear) */}
+        {/* Quick Toolbar (Search & Clear) */}
         <div className="select-modal-toolbar">
-          <div className="quick-random-group">
-            <span className="quick-label">สุ่มเบอร์:</span>
-            <button 
-              type="button" 
-              className="btn-quick-chip"
-              onClick={() => handleRandomPick(1)}
-              title="สุ่ม 1 เบอร์"
-            >
-              <Sparkles size={12} /> 1 เบอร์
-            </button>
-            <button 
-              type="button" 
-              className="btn-quick-chip"
-              onClick={() => handleRandomPick(2)}
-              title="สุ่ม 2 เบอร์"
-            >
-              <Sparkles size={12} /> 2 เบอร์
-            </button>
-            <button 
-              type="button" 
-              className="btn-quick-chip"
-              onClick={() => handleRandomPick(3)}
-              title="สุ่ม 3 เบอร์"
-            >
-              <Sparkles size={12} /> 3 เบอร์
-            </button>
-            <button 
-              type="button" 
-              className="btn-quick-chip"
-              onClick={() => handleRandomPick(4)}
-              title="สุ่ม 4 เบอร์"
-            >
-              <Sparkles size={12} /> 4 เบอร์
-            </button>
-            {selectedNumbers.length > 0 && (
-              <button 
-                type="button" 
-                className="btn-quick-chip chip-clear"
-                onClick={handleClearSelection}
-                title="ล้างที่เลือกทั้งหมด"
-              >
-                <RotateCcw size={12} /> ล้าง
-              </button>
-            )}
-          </div>
-
-          {/* Quick Search */}
           <div className="select-search-wrap">
-            <Search size={14} className="search-icon-inside" />
+            <Search size={15} className="search-icon-inside" />
             <input 
               type="text" 
-              placeholder="ค้นหาเลข..." 
+              placeholder="ค้นหาเลขที่ต้องการ..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="select-search-field"
             />
+            {searchQuery && (
+              <button 
+                type="button" 
+                className="select-search-clear-btn"
+                onClick={() => setSearchQuery('')}
+                title="ล้างการค้นหา"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
+
+          {selectedNumbers.length > 0 && (
+            <button 
+              type="button" 
+              className="btn-quick-chip chip-clear"
+              onClick={handleClearSelection}
+              title="ล้างที่เลือกทั้งหมด"
+            >
+              <RotateCcw size={13} /> ล้าง ({selectedNumbers.length})
+            </button>
+          )}
         </div>
 
         {/* Scrollable Numbers Grid (ONLY Available Remaining Numbers) */}
@@ -274,23 +248,14 @@ export function SelectRemainingNumbersModal({
         <div className="select-modal-footer">
           
           {/* Customer Name Input (Optional) */}
-          <div className="select-footer-row">
-            <div className="customer-input-group full-width">
-              <label className="input-tiny-label">ชื่อเฟสของคุณ (เพื่อแจ้งผู้ขาย):</label>
-              <input 
-                type="text" 
-                placeholder="เช่น สมชาย สายเปย์ (หรือเว้นว่างไว้)"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="customer-fb-input"
-              />
-            </div>
-          </div>
-
-          {/* Promotion Banner Strip */}
-          <div className="promo-badge-strip">
-            <span className="promo-tag">🔥 {typeInfo.name}</span>
-            <span className="promo-text">{typeInfo.promoDetail} ({typeInfo.promoText})</span>
+          <div className="customer-input-group full-width">
+            <input 
+              type="text" 
+              placeholder="ชื่อเฟสของคุณ (ระบุเพื่อแจ้งผู้ขาย หรือเว้นว่างได้)"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              className="customer-fb-input"
+            />
           </div>
 
           {/* Selection Live Bar */}
@@ -303,22 +268,16 @@ export function SelectRemainingNumbersModal({
                 {count > 0 ? (
                   selectedNumbers.join(', ')
                 ) : (
-                  <span className="text-muted-italics">ยังไม่ได้เลือกเบอร์ (กดเลือกได้จากตารางด้านบน)</span>
+                  <span className="text-muted-italics">แตะเลือกเลขที่ต้องการจากกระดานด้านบน</span>
                 )}
               </div>
-              {/* Dynamic discount hint */}
-              {nextDiscountHint > 0 && count > 0 && (
-                <div className="next-discount-tip animate-fade-in">
-                  💡 เลือกอีก <strong>{nextDiscountHint}</strong> เบอร์ รับส่วนลดเพิ่มเป็น <strong>{discount + typeInfo.discountPerStep}.-</strong>
-                </div>
-              )}
             </div>
 
             <div className="summary-right">
               {discount > 0 ? (
                 <>
                   <div className="promo-discount-badge animate-fade-in">
-                    🎉 ลดทันที -{discount} บาท
+                    ลด -{discount}.-
                   </div>
                   <div className="total-price-val">
                     <span className="raw-price-strikethrough">{rawTotal.toLocaleString()}</span>

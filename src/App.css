@@ -2879,92 +2879,90 @@ body {
   color: #ffffff;
 }
 
-/* Modal Toolbar (Quick Random + Search) */
+/* Modal Toolbar (Search & Clear) */
 .select-modal-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 12px 22px;
+  gap: 12px;
+  padding: 10px 20px;
   background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-.quick-random-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.quick-label {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #94a3b8;
-}
-.btn-quick-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-family: var(--font-thai);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.btn-quick-chip:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-}
-.btn-quick-chip.chip-clear {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.25);
-  background: rgba(239, 68, 68, 0.06);
-}
-.btn-quick-chip.chip-clear:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-}
-
 .select-search-wrap {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
 }
 .search-icon-inside {
   position: absolute;
-  left: 10px;
-  color: #64748b;
+  left: 12px;
+  color: #94a3b8;
   pointer-events: none;
 }
 .select-search-field {
+  width: 100%;
   background: #161a25;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #f8fafc;
-  padding: 6px 12px 6px 30px;
-  border-radius: 8px;
+  padding: 8px 36px 8px 34px;
+  border-radius: 10px;
   font-family: var(--font-thai);
-  font-size: 12.5px;
+  font-size: 13.5px;
   outline: none;
-  width: 120px;
-  transition: width 0.2s, border-color 0.2s;
+  transition: all 0.2s ease;
 }
 .select-search-field:focus {
-  width: 150px;
   border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.select-search-clear-btn {
+  position: absolute;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #94a3b8;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.select-search-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+.btn-quick-chip.chip-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-quick-chip.chip-clear:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
 }
 
-/* Scrollable Numbers Area */
+/* Scrollable Numbers Area (Big, responsive, comfortable) */
 .select-numbers-scroll-area {
-  padding: 16px 22px;
+  padding: 16px 20px;
   overflow-y: auto;
-  max-height: 280px;
-  flex: 1;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-height: 280px;
 }
 .no-available-found {
   text-align: center;
@@ -2975,65 +2973,64 @@ body {
 .select-pills-grid {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  gap: 6px;
+  gap: 8px;
 }
 @media (max-width: 580px) {
   .select-pills-grid {
-    grid-template-columns: repeat(8, 1fr);
-    gap: 5px;
-  }
-}
-@media (max-width: 420px) {
-  .select-pills-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 5px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
   }
 }
 
 /* Multi-select Number Pill */
 .select-number-pill {
-  aspect-ratio: 1 / 1;
+  min-height: 46px;
   position: relative;
   background: #171c28;
-  border: 1.5px solid rgba(255, 255, 255, 0.09);
-  border-radius: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
   color: #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 0;
+  padding: 4px;
   transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .select-number-pill:hover {
-  transform: scale(1.12);
-  border-color: rgba(245, 158, 11, 0.6);
-  z-index: 5;
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.6);
+  background: #1e2433;
+}
+.select-number-pill:active {
+  transform: scale(0.94);
 }
 .select-number-pill.is-selected {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   border-color: #60a5fa;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
-  transform: scale(1.05);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
 }
 .pill-check-indicator {
   position: absolute;
-  top: 1px;
-  right: 1px;
+  top: 2px;
+  right: 2px;
   background: #10b981;
   color: #fff;
   border-radius: 50%;
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .pill-val-text {
   font-family: 'Kanit', var(--font-thai);
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 800;
+  letter-spacing: 0.5px;
   line-height: 1;
 }
 
@@ -10500,16 +10497,25 @@ body {
 
   /* Front-end: Remaining Numbers Selection Modal */
   .select-modal-backdrop {
-    padding: 8px;
+    padding: 0;
+    align-items: flex-end;
   }
 
   .select-modal-container {
-    max-height: 95vh;
-    border-radius: 16px;
+    width: 100%;
+    max-width: 100%;
+    height: 92vh;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .select-modal-header {
     padding: 14px 16px 10px;
+    flex-shrink: 0;
   }
 
   .select-modal-title {
@@ -10521,61 +10527,113 @@ body {
   }
 
   .select-modal-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    padding: 10px 14px;
-  }
-
-  .quick-random-group {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 2px;
-    scrollbar-width: none;
-  }
-
-  .quick-random-group::-webkit-scrollbar {
-    display: none;
+    padding: 8px 14px;
+    gap: 8px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .select-search-wrap {
+    flex: 1;
     width: 100%;
   }
 
   .select-search-field {
     width: 100% !important;
+    font-size: 13px;
+    padding: 7px 32px 7px 30px;
   }
 
+  /* Responsive Board: Extra large buttons and full vertical scroll space */
   .select-numbers-scroll-area {
-    max-height: 250px;
     padding: 10px 14px;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .select-pills-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .select-number-pill {
+    min-height: 52px !important;
+    border-radius: 12px !important;
+    border-width: 1.5px !important;
+  }
+
+  .select-number-pill .pill-val-text {
+    font-size: 18px !important;
+    font-weight: 800 !important;
   }
 
   .select-modal-footer {
-    padding: 12px 14px 16px;
-    gap: 10px;
+    padding: 10px 14px 16px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .customer-fb-input {
+    padding: 8px 12px;
+    font-size: 13px;
   }
 
   .select-live-summary-bar {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 8px 12px;
+  }
+
+  .summary-left {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .selected-count-label {
+    font-size: 13px;
+  }
+
+  .selected-nums-preview {
+    font-size: 11.5px;
+    max-width: 190px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .summary-right {
-    text-align: left;
+    text-align: right;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top: 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding-top: 0;
+    border-top: none;
+    flex-shrink: 0;
+  }
+
+  .total-price-label {
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  .total-price-val {
+    font-size: 17px !important;
+    font-weight: 800;
   }
 
   .btn-action-send-fb {
-    padding: 13px 14px;
-    font-size: 14px;
+    padding: 13px 16px;
+    font-size: 15px;
+    border-radius: 12px;
+    font-weight: 700;
   }
 
   /* Round Detail Layout */
