@@ -197,18 +197,25 @@ export function SelectRemainingNumbersModal({
               เลือกเบอร์ที่ยังไม่ออก
             </h2>
             <p className="select-modal-subtitle">
-              {round?.title} · เหลือว่าง {availableNumbers.length} เบอร์ (เบอร์ละ {pricePerNumber}.-)
+              {round?.title} · เหลือว่าง {availableNumbers.length} เบอร์
             </p>
           </div>
 
-          <button 
-            type="button" 
-            className="select-modal-btn-close" 
-            onClick={onClose}
-            aria-label="ปิด"
-          >
-            <X size={18} />
-          </button>
+          <div className="select-modal-header-right">
+            <div className="select-header-price-badge">
+              <span className="price-badge-label">เบอร์ละ</span>
+              <span className="price-badge-amount">{pricePerNumber}.-</span>
+            </div>
+
+            <button 
+              type="button" 
+              className="select-modal-btn-close" 
+              onClick={onClose}
+              aria-label="ปิด"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Quick Toolbar (Random Pick, Search, Clear) */}
