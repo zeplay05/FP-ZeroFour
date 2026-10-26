@@ -39,13 +39,9 @@ export function CardHomePage({
     return { available, booked, paid, total };
   };
 
-  // Open boards (กระดานที่เปิดให้จอง)
+  // Open boards (กระดานที่เปิดให้จอง: เฉพาะกระดานที่สถานะเปิดจองเท่านั้น)
   const openRounds = useMemo(() => {
-    const list = sortedRounds.filter(r => r.status === 'open' || !r.status);
-    if (list.length === 0 && sortedRounds.length > 0) {
-      return [sortedRounds[0]];
-    }
-    return list;
+    return sortedRounds.filter(r => (r.status === 'open' || !r.status) && r.status !== 'closed' && r.status !== 'drawn');
   }, [sortedRounds]);
 
   // Closed/history boards (ประวัติตารางที่ปิดให้บริการจอง)
@@ -159,9 +155,20 @@ export function CardHomePage({
           )}
         </div>
 
-        {/* Featured Open Boards Grid */}
-        <div className="open-boards-cards-grid">
-          {openRounds.map((round) => {
+        {/* Featured Open Boards Grid or Empty State Notice */}
+        {openRounds.length === 0 ? (
+          <div className="empty-open-boards-box animate-fade-in">
+            <div className="empty-open-boards-icon">
+              <Sparkles size={30} />
+            </div>
+            <h3 className="empty-open-boards-title">กระดานใหม่เร็วนี้</h3>
+            <p className="empty-open-boards-desc">
+              ขณะนี้ยังไม่มีกระดานที่เปิดรับจอง สามารถติดตามกระดานใหม่ได้เร็วๆ นี้ หรือเลือกดูประวัติตารางที่ปิดรอบแล้วด้านล่าง
+            </p>
+          </div>
+        ) : (
+          <div className="open-boards-cards-grid">
+            {openRounds.map((round) => {
             const stats = getRoundStats(round);
             const bookedCount = stats.booked + stats.paid;
             const bookedPct = Math.round((bookedCount / stats.total) * 100);
@@ -238,7 +245,8 @@ export function CardHomePage({
               </div>
             );
           })}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* =========================================================================

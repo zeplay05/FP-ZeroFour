@@ -253,7 +253,8 @@ export function AdminDashboard({
 
   // Find currently selected board (null = อยู่หน้ารายการตาราง)
   const selectedBoard = selectedBoardId ? rounds.find(r => r.id === selectedBoardId) : null;
-  const isCurrentBoardClosed = selectedBoard?.status === 'closed' || selectedBoard?.status === 'drawn';
+  const isCurrentBoardDrawn = selectedBoard?.status === 'drawn';
+  const isCurrentBoardClosed = selectedBoard?.status === 'closed' || isCurrentBoardDrawn;
 
   // Helper to calculate board stats
   const getBoardStats = (board) => {
@@ -350,8 +351,8 @@ export function AdminDashboard({
   };
 
   const openEditBoardModal = (board) => {
-    if (board.status === 'closed' || board.status === 'drawn') {
-      showNotice('กระดานนี้ปิดจองแล้ว ไม่สามารถแก้ไขได้ (กดดูข้อมูลได้อย่างเดียว)');
+    if (board.status === 'drawn') {
+      showNotice('กระดานนี้ออกผลรางวัลแล้ว ไม่สามารถแก้ไขได้');
       return;
     }
     setEditingBoard(board);
@@ -445,8 +446,8 @@ export function AdminDashboard({
   const handleAddBooking = (e) => {
     e.preventDefault();
     if (!selectedBoard) return;
-    if (selectedBoard.status === 'closed' || selectedBoard.status === 'drawn') {
-      alert('กระดานนี้ปิดจองแล้ว ไม่สามารถเพิ่มหรือแก้ไขข้อมูลการจองได้');
+    if (selectedBoard.status === 'drawn') {
+      alert('กระดานนี้ออกผลรางวัลแล้ว ไม่สามารถเพิ่มหรือแก้ไขข้อมูลการจองได้');
       return;
     }
 
@@ -544,7 +545,7 @@ export function AdminDashboard({
 
   // Toggle booking status between 'booked' (รอยอด) and 'paid' (จ่ายแล้ว)
   const handleToggleBookingStatus = (bookingId) => {
-    if (!selectedBoard || selectedBoard.status === 'closed' || selectedBoard.status === 'drawn') return;
+    if (!selectedBoard || selectedBoard.status === 'drawn') return;
     const booking = (selectedBoard.bookings || []).find(b => b.id === bookingId);
     if (!booking) return;
 
@@ -581,7 +582,7 @@ export function AdminDashboard({
 
   // Delete booking -> Releases numbers back to available pool
   const handleDeleteBooking = (bookingId, custName, numsCount) => {
-    if (!selectedBoard || selectedBoard.status === 'closed' || selectedBoard.status === 'drawn') return;
+    if (!selectedBoard || selectedBoard.status === 'drawn') return;
     if (confirm(`ยกเลิกการจองของคุณ "${custName}" (${numsCount} เบอร์) และคืนเบอร์กลับเป็นเลขว่าง?`)) {
       const updatedBookings = (selectedBoard.bookings || []).filter(b => b.id !== bookingId);
 
@@ -616,7 +617,7 @@ export function AdminDashboard({
 
   // Click on visual grid number to quick-fill booking form
   const handleNumberGridClick = (numItem) => {
-    if (!selectedBoard || selectedBoard.status === 'closed' || selectedBoard.status === 'drawn') return;
+    if (!selectedBoard || selectedBoard.status === 'drawn') return;
     if (numItem.status !== 'available') return;
     const current = bookingForm.numbersInput
       .split(/[\s,]+/)
@@ -1179,14 +1180,15 @@ export function AdminDashboard({
                         const stats = getBoardStats(board);
                         const isSelected = board.id === selectedBoardId;
                         const typeInfo = getBoardTypeInfo(board.boardType);
-                        const isBoardClosed = board.status === 'closed' || board.status === 'drawn';
+                        const isBoardDrawn = board.status === 'drawn';
+                        const isBoardClosed = board.status === 'closed';
 
                         return (
                           <tr 
                             key={board.id} 
                             className="admin-table-row"
                             onClick={() => setSelectedBoardId(board.id)}
-                            title={isBoardClosed ? "คลิกเพื่อดูข้อมูลกระดานนี้ (โหมดดูข้อมูล)" : "คลิกเพื่อเข้าหน้าจัดการเบอร์และบันทึกยอดของกระดานนี้"}
+                            title={isBoardDrawn ? "คลิกเพื่อดูข้อมูลกระดานนี้ (โหมดดูข้อมูล)" : "คลิกเพื่อเข้าหน้าจัดการเบอร์และบันทึกยอดของกระดานนี้"}
                           >
                             {/* 1. Cover Thumbnail */}
                             <td className="td-thumb">
@@ -1264,11 +1266,11 @@ export function AdminDashboard({
                               <div className="table-actions-group">
                                 <button
                                   type="button"
-                                  className={`btn-table-action ${isBoardClosed ? 'view-mode' : 'select'}`}
+                                  className={`btn-table-action ${isBoardDrawn ? 'view-mode' : 'select'}`}
                                   onClick={() => setSelectedBoardId(board.id)}
-                                  title={isBoardClosed ? "คลิกเพื่อดูข้อมูลกระดานนี้ (โหมดดูข้อมูล)" : "คลิกเพื่อเข้าหน้าจัดการเบอร์และบันทึกยอดของกระดานนี้"}
+                                  title={isBoardDrawn ? "คลิกเพื่อดูข้อมูลกระดานนี้ (โหมดดูข้อมูล)" : "คลิกเพื่อเข้าหน้าจัดการเบอร์และบันทึกยอดของกระดานนี้"}
                                 >
-                                  {isBoardClosed ? (
+                                  {isBoardDrawn ? (
                                     <>
                                       <Eye size={13} />
                                       <span>ดูข้อมูล</span>
@@ -1279,12 +1281,12 @@ export function AdminDashboard({
                                 </button>
                                 <button
                                   type="button"
-                                  className={`btn-table-action edit ${isBoardClosed ? 'disabled' : ''}`}
-                                  disabled={isBoardClosed}
-                                  onClick={() => !isBoardClosed && openEditBoardModal(board)}
-                                  title={isBoardClosed ? "กระดานนี้ปิดจองแล้ว ไม่สามารถแก้ไขได้" : "แก้ไขข้อมูลกระดาน"}
+                                  className={`btn-table-action edit ${isBoardDrawn ? 'disabled' : ''}`}
+                                  disabled={isBoardDrawn}
+                                  onClick={() => !isBoardDrawn && openEditBoardModal(board)}
+                                  title={isBoardDrawn ? "กระดานนี้ออกรางวัลแล้ว ไม่สามารถแก้ไขได้" : "แก้ไขข้อมูลกระดาน"}
                                 >
-                                  {isBoardClosed ? <Lock size={12} /> : <Edit3 size={13} />}
+                                  {isBoardDrawn ? <Lock size={12} /> : <Edit3 size={13} />}
                                 </button>
                                 <button
                                   type="button"
@@ -1429,7 +1431,7 @@ export function AdminDashboard({
                       </div>
                     </div>
                     <div className="chip-actions">
-                      {board.status === 'open' && (
+                      {board.status !== 'drawn' && (
                         <button
                           type="button"
                           className="btn-icon-tiny edit"
@@ -1511,7 +1513,7 @@ export function AdminDashboard({
                       )}
                     </div>
                     <div className="banner-right">
-                      {!isCurrentBoardClosed ? (
+                      {!isCurrentBoardDrawn ? (
                         <button
                           type="button"
                           className="btn-banner-edit"
@@ -1523,7 +1525,7 @@ export function AdminDashboard({
                       ) : (
                         <span className="banner-locked-tag">
                           <Lock size={13} />
-                          <span>ปิดจองแล้ว (โหมดดูข้อมูล)</span>
+                          <span>ออกผลรางวัลแล้ว (ข้อมูลถูกล็อค)</span>
                         </span>
                       )}
                     </div>
@@ -1536,13 +1538,15 @@ export function AdminDashboard({
                     <div className="admin-booking-box">
                       <h3 className="box-title">
                         <UserCheck size={18} className="title-icon" />
-                        <span>1.1 ข้อมูลการจอง {!isCurrentBoardClosed ? '(ระบุเบอร์ที่จอง)' : '(ปิดให้บริการจองแล้ว)'}</span>
+                        <span>1.1 ข้อมูลการจอง {!isCurrentBoardDrawn ? '(ระบุเบอร์ที่จอง)' : '(ออกผลรางวัลแล้ว)'}</span>
                       </h3>
 
-                      {!isCurrentBoardClosed ? (
+                      {!isCurrentBoardDrawn ? (
                         <>
                           <p className="box-sub">
-                            ใส่ชื่อเฟสและเบอร์ ระบบจะตัดยอดและลบล้างเลขว่างโดยอัตโนมัติทันที
+                            {selectedBoard.status === 'closed'
+                              ? 'กระดานปิดรับจองหน้าร้านแล้ว (แต่แอดมินยังสามารถจัดการเบอร์และบันทึกยอดได้)'
+                              : 'ใส่ชื่อเฟสและเบอร์ ระบบจะตัดยอดและลบล้างเลขว่างโดยอัตโนมัติทันที'}
                           </p>
 
                           <form onSubmit={handleAddBooking} className="admin-booking-form">
@@ -1779,7 +1783,7 @@ export function AdminDashboard({
                     <div className="admin-visual-grid-box">
                       <div className="visual-grid-header">
                         <h3 className="box-title">
-                          {isCurrentBoardClosed 
+                          {isCurrentBoardDrawn 
                             ? 'ตารางเลข 00-99 (โหมดดูข้อมูล)' 
                             : 'ตารางเลข 00-99 (คลิกเลขว่างเพื่อเลือก)'}
                         </h3>
@@ -1790,21 +1794,21 @@ export function AdminDashboard({
                         </div>
                       </div>
 
-                      <div className={`interactive-numbers-grid ${isCurrentBoardClosed ? 'read-only' : ''}`}>
+                      <div className={`interactive-numbers-grid ${isCurrentBoardDrawn ? 'read-only' : ''}`}>
                         {(selectedBoard.numbers || []).map(item => {
                           const isWinning = Boolean(selectedBoard.winningNumber) && String(selectedBoard.winningNumber).padStart(2, '0') === item.number;
                           return (
                             <button
                               key={item.number}
                               type="button"
-                              className={`interactive-num-btn ${item.status} ${isWinning ? 'winning' : ''} ${isCurrentBoardClosed ? 'read-only' : ''}`}
-                              onClick={() => !isCurrentBoardClosed && handleNumberGridClick(item)}
-                              disabled={isCurrentBoardClosed || item.status !== 'available'}
+                              className={`interactive-num-btn ${item.status} ${isWinning ? 'winning' : ''} ${isCurrentBoardDrawn ? 'read-only' : ''}`}
+                              onClick={() => !isCurrentBoardDrawn && handleNumberGridClick(item)}
+                              disabled={isCurrentBoardDrawn || item.status !== 'available'}
                               title={
                                 isWinning 
                                   ? `🎉 เลข ${item.number} (เลขรางวัลที่ออก!)` 
-                                  : isCurrentBoardClosed
-                                    ? `เลข ${item.number} (${item.status === 'available' ? 'ว่าง' : item.customerName || item.status}) - ปิดให้บริการจองแล้ว`
+                                  : isCurrentBoardDrawn
+                                    ? `เลข ${item.number} (${item.status === 'available' ? 'ว่าง' : item.customerName || item.status}) - ออกผลรางวัลแล้ว`
                                     : item.status === 'available' 
                                       ? `เลข ${item.number} (ว่าง) - คลิกเพื่อเลือก` 
                                       : `เลข ${item.number} (${item.customerName || item.status})`
