@@ -199,7 +199,15 @@ function App() {
     try {
       localStorage.setItem('lottery_rounds_v6', JSON.stringify(rounds));
     } catch (e) {
-      console.error('Error saving rounds to localStorage', e);
+      console.error('Error saving rounds to localStorage, attempting cleanup...', e);
+      try {
+        localStorage.removeItem('lottery_rounds_v5');
+        localStorage.removeItem('lottery_rounds_v4');
+        localStorage.removeItem('lottery_rounds_v3');
+        localStorage.setItem('lottery_rounds_v6', JSON.stringify(rounds));
+      } catch (err2) {
+        console.error('Fatal localStorage quota error:', err2);
+      }
     }
   }, [rounds]);
 

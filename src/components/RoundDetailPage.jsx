@@ -103,8 +103,12 @@ export function RoundDetailPage({
 
           {/* Slab / Cover Art Box */}
           <div className="round-slab-art-container">
-            {round.coverImage ? (
-              <img src={round.coverImage} alt={round.title} className="slab-img" />
+            {(round.coverImage || round.image || round.imageUrl || round.cover) ? (
+              <img 
+                src={round.coverImage || round.image || round.imageUrl || round.cover} 
+                alt={round.title} 
+                className="slab-img" 
+              />
             ) : (
               <div className="slab-card-placeholder">
                 <div className="slab-inner-card">

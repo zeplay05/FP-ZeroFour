@@ -47,32 +47,33 @@ import {
 } from '../utils/supabaseClient';
 
 // Compress and convert selected file to base64 Data URL (optimizes size for localStorage & fast loading)
-function processImageFile(file, maxWidth = 1000, quality = 0.82) {
-  return new Promise((resolve, reject) => {
+function processImageFile(file, maxWidth = 720, quality = 0.72) {
+  return new Promise((resolve) => {
     if (!file) return resolve(null);
-    if (!file.type.startsWith('image/')) {
-      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
-      return resolve(null);
-    }
     const reader = new FileReader();
-    reader.onerror = reject;
+    reader.onerror = () => resolve(null);
     reader.onload = (e) => {
       const img = new Image();
-      img.onerror = reject;
+      img.onerror = () => resolve(e.target.result);
       img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
+        try {
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedDataUrl);
+        } catch (canvasErr) {
+          console.warn('Canvas compression error, using raw data url', canvasErr);
+          resolve(e.target.result);
         }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedDataUrl);
       };
       img.src = e.target.result;
     };
@@ -363,7 +364,7 @@ export function AdminDashboard({
       totalNumbers: board.numbers ? board.numbers.length : 100,
       status: board.status || 'open',
       winningNumber: board.winningNumber || '',
-      coverImage: board.coverImage || '',
+      coverImage: board.coverImage || board.image || '',
       boardType: board.boardType || 'duck'
     });
     setIsBoardModalOpen(true);
@@ -376,6 +377,10 @@ export function AdminDashboard({
       return;
     }
 
+    const finalCover = (boardForm.coverImage && typeof boardForm.coverImage === 'string') 
+      ? boardForm.coverImage.trim() 
+      : (boardForm.coverImage || null);
+
     if (editingBoard) {
       // Update existing board
       const updated = rounds.map(r => {
@@ -387,7 +392,8 @@ export function AdminDashboard({
             pricePerNumber: Number(boardForm.pricePerNumber) || 50,
             status: boardForm.status,
             winningNumber: boardForm.winningNumber.trim(),
-            coverImage: boardForm.coverImage.trim() || null,
+            coverImage: finalCover,
+            image: finalCover,
             boardType: boardForm.boardType || 'duck'
           };
         }
@@ -412,7 +418,8 @@ export function AdminDashboard({
         pricePerNumber: Number(boardForm.pricePerNumber) || 50,
         status: boardForm.status,
         winningNumber: boardForm.winningNumber.trim(),
-        coverImage: boardForm.coverImage.trim() || null,
+        coverImage: finalCover,
+        image: finalCover,
         boardType: boardForm.boardType || 'duck',
         gradient: 'indigo',
         theme: 'neon',

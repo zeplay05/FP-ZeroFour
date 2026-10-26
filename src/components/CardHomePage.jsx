@@ -289,15 +289,23 @@ export function CardHomePage({
                     </span>
                   </div>
 
-                  {/* Graded Slab Graphic Artwork (ตารางเปล่าๆ แบบเดิม) */}
+                  {/* Graded Slab Graphic Artwork / Custom Cover Image */}
                   <div className="board-slab-artwork-area">
-                    <div className="graded-slab-illustration">
-                      <div className="slab-outer-casing">
-                        <div className="slab-card-inner">
-                          <div className="slab-card-motif" />
+                    {(round.coverImage || round.image) ? (
+                      <img 
+                        src={round.coverImage || round.image} 
+                        alt={round.title} 
+                        className="board-custom-cover" 
+                      />
+                    ) : (
+                      <div className="graded-slab-illustration">
+                        <div className="slab-outer-casing">
+                          <div className="slab-card-inner">
+                            <div className="slab-card-motif" />
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                 </div>

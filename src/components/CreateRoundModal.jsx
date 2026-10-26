@@ -15,32 +15,33 @@ const GRADIENT_OPTIONS = [
   { id: 'amber', name: 'ทองอำพัน (เมืองเก่า)', color: '#f59e0b' }
 ];
 
-function processImageFile(file, maxWidth = 1000, quality = 0.82) {
-  return new Promise((resolve, reject) => {
+function processImageFile(file, maxWidth = 720, quality = 0.72) {
+  return new Promise((resolve) => {
     if (!file) return resolve(null);
-    if (!file.type.startsWith('image/')) {
-      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
-      return resolve(null);
-    }
     const reader = new FileReader();
-    reader.onerror = reject;
+    reader.onerror = () => resolve(null);
     reader.onload = (e) => {
       const img = new Image();
-      img.onerror = reject;
+      img.onerror = () => resolve(e.target.result);
       img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
+        try {
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedDataUrl);
+        } catch (canvasErr) {
+          console.warn('Canvas error, fallback to raw data url', canvasErr);
+          resolve(e.target.result);
         }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedDataUrl);
       };
       img.src = e.target.result;
     };
@@ -81,15 +82,18 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
       title: title.trim(),
       roundName: `งวดเบอร์หวย ${title.trim()} 00-99`,
       gradient: gradient,
-      coverImage: coverImage,
+      coverImage: coverImage || null,
+      image: coverImage || null,
       pricePerNumber: Number(pricePerNumber) || 50,
       boardType: boardType,
       theme: theme,
+      status: 'open',
       createdAt: Date.now(), // Newest timestamp (ล่าสุดอยู่อันแรกเสมอ)
       sellerPhone: '089-123-4567',
       sellerLine: 'https://line.me',
       winningNumber: '',
-      numbers: generateInitialNumbers('empty')
+      numbers: generateInitialNumbers('empty'),
+      bookings: []
     };
 
     onCreateRound(newRound);
@@ -179,6 +183,16 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
                 onChange={handleCustomImageUpload}
               />
             </label>
+            <div style={{ marginTop: '8px' }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="หรือวางลิงก์รูปภาพ เช่น https://... หรือ /logo-icon.jpg"
+                value={typeof coverImage === 'string' && !coverImage.startsWith('data:') ? coverImage : ''}
+                onChange={(e) => setCoverImage(e.target.value.trim() || null)}
+                style={{ fontSize: '13px', padding: '8px 12px' }}
+              />
+            </div>
           </div>
 
 
