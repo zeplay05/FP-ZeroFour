@@ -101,8 +101,8 @@ export function RoundDetailPage({
         <div className="round-left-column">
 
           {/* Card Title & Info Header */}
-          <div className="round-header-row">
-            <div className="round-title-group">
+          <div className={`round-header-row ${round.winningNumber ? 'centered' : ''}`}>
+            <div className={`round-title-group ${round.winningNumber ? 'centered-winning-header' : ''}`}>
               <h2 className="round-page-title">{round.title}</h2>
 
               {round.winningNumber ? (
@@ -117,14 +117,11 @@ export function RoundDetailPage({
                   <div className="winning-congrats-shoutout">
                     ดีใจกับพี่ {winnerName || 'ผู้โชคดี'} 🎉
                   </div>
-                  <div className="winning-closed-subtag">
-                    🔒 ตารางประวัติ (ปิดให้บริการจองแล้ว)
-                  </div>
                 </div>
               ) : isClosed ? (
                 <p className="round-page-subtitle">
                   <span className="closed-round-status-pill">
-                    🔒 ตารางประวัติ (ปิดให้บริการจองแล้ว)
+                    🔒 ปิดให้บริการจองแล้ว
                   </span>
                 </p>
               ) : (

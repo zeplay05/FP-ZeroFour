@@ -12557,18 +12557,35 @@ html, body {
 }
 
 /* 5. Winning Announcement Showcase Card (รางวัลที่ออก & ดีใจกับพี่...) */
+.round-header-row.centered {
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.round-title-group.centered-winning-header {
+  width: 100%;
+  align-items: center;
+  text-align: center;
+}
+
+.round-title-group.centered-winning-header .round-page-title {
+  text-align: center;
+}
+
 .round-winning-announcement-card {
-  margin-top: 12px;
+  margin: 16px auto 14px auto;
+  width: 100%;
+  max-width: 480px;
   background: linear-gradient(135deg, rgba(30, 20, 60, 0.95) 0%, rgba(18, 14, 38, 0.95) 100%);
   border: 1.5px solid rgba(245, 158, 11, 0.6);
   border-radius: 16px;
-  padding: 16px 20px 14px 20px;
+  padding: 18px 24px 16px 24px;
   text-align: center;
   box-shadow: 0 10px 30px rgba(245, 158, 11, 0.22), 0 0 24px rgba(168, 85, 247, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(12px);
   position: relative;
   overflow: hidden;
-  max-width: 480px;
 }
 
 .winning-announcement-header {
@@ -12580,12 +12597,12 @@ html, body {
 }
 
 .winning-trophy-gold {
-  font-size: 18px;
+  font-size: 20px;
   filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
 }
 
 .winning-label-heading {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #fbbf24;
   letter-spacing: 0.5px;
@@ -12594,7 +12611,7 @@ html, body {
 }
 
 .winning-number-giant {
-  font-size: 42px;
+  font-size: 46px;
   font-weight: 900;
   color: #ffffff;
   line-height: 1.1;
@@ -12605,21 +12622,12 @@ html, body {
 }
 
 .winning-congrats-shoutout {
-  font-size: 16.5px;
+  font-size: 17px;
   font-weight: 700;
   color: #4ade80;
   text-shadow: 0 0 12px rgba(74, 222, 128, 0.4);
-  margin-bottom: 8px;
+  margin: 0;
   letter-spacing: 0.3px;
 }
 
-.winning-closed-subtag {
-  font-size: 11.5px;
-  color: #94a3b8;
-  display: inline-block;
-  padding: 3px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
 
