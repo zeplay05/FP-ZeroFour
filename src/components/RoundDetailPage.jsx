@@ -38,6 +38,25 @@ export function RoundDetailPage({
     return numbers.filter(n => n.status === 'paid').map(n => n.number);
   }, [numbers]);
 
+  // Find winner name for round.winningNumber
+  const winningNumStr = round.winningNumber ? String(round.winningNumber).trim().padStart(2, '0') : null;
+  const winnerName = useMemo(() => {
+    if (!winningNumStr) return null;
+    const foundBooking = (round.bookings || []).find(b => 
+      (b.numbers || []).some(n => String(n).trim().padStart(2, '0') === winningNumStr)
+    );
+    if (foundBooking && (foundBooking.customerName || foundBooking.facebookName)) {
+      return (foundBooking.customerName || foundBooking.facebookName).trim();
+    }
+    const foundNum = (round.numbers || []).find(n => 
+      String(n.number).trim().padStart(2, '0') === winningNumStr
+    );
+    if (foundNum && (foundNum.customerName || foundNum.facebookName)) {
+      return (foundNum.customerName || foundNum.facebookName).trim();
+    }
+    return null;
+  }, [round.bookings, round.numbers, winningNumStr]);
+
   // Click a number on the grid opens remaining selector modal (only if open)
   const handleGridNumberClick = () => {
     if (isClosed) return;
@@ -85,20 +104,34 @@ export function RoundDetailPage({
           <div className="round-header-row">
             <div className="round-title-group">
               <h2 className="round-page-title">{round.title}</h2>
-              <p className="round-page-subtitle">
-                {isClosed ? (
+
+              {round.winningNumber ? (
+                <div className="round-winning-announcement-card animate-fade-in">
+                  <div className="winning-announcement-header">
+                    <span className="winning-trophy-gold">🏆</span>
+                    <span className="winning-label-heading">รางวัลที่ออก</span>
+                  </div>
+                  <div className="winning-number-giant">
+                    {round.winningNumber}
+                  </div>
+                  <div className="winning-congrats-shoutout">
+                    ดีใจกับพี่ {winnerName || 'ผู้โชคดี'} 🎉
+                  </div>
+                  <div className="winning-closed-subtag">
+                    🔒 ตารางประวัติ (ปิดให้บริการจองแล้ว)
+                  </div>
+                </div>
+              ) : isClosed ? (
+                <p className="round-page-subtitle">
                   <span className="closed-round-status-pill">
                     🔒 ตารางประวัติ (ปิดให้บริการจองแล้ว)
-                    {round.winningNumber && (
-                      <span className="winning-badge-inline">🏆 เลขที่ออก: {round.winningNumber}</span>
-                    )}
                   </span>
-                ) : (
-                  <>
-                    เบอร์ละ {round.pricePerNumber}.- · เหลือว่าง {availableNumbers.length} เบอร์
-                  </>
-                )}
-              </p>
+                </p>
+              ) : (
+                <p className="round-page-subtitle">
+                  เบอร์ละ {round.pricePerNumber}.- · เหลือว่าง {availableNumbers.length} เบอร์
+                </p>
+              )}
             </div>
           </div>
 

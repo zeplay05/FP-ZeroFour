@@ -403,10 +403,12 @@ export function AdminDashboard({
       onUpdateRounds(updated);
       showNotice(`บันทึกการแก้ไขกระดาน "${boardForm.title}" สำเร็จ!`);
     } else {
-      // Create new board with 00-99 numbers
-      const totalCount = Math.max(10, Math.min(200, Number(boardForm.totalNumbers) || 100));
+      // Create new board with numbers (01 for duck/wheel, 00 for lotto)
+      const isDuckOrWheel = boardForm.boardType === 'duck' || boardForm.boardType === 'wheel';
+      const startFrom = isDuckOrWheel ? 1 : 0;
+      const totalCount = Math.max(5, Math.min(200, Number(boardForm.totalNumbers) || (isDuckOrWheel ? 30 : 100)));
       const generatedNumbers = Array.from({ length: totalCount }, (_, i) => ({
-        number: String(i).padStart(2, '0'),
+        number: String(startFrom + i).padStart(2, '0'),
         status: 'available',
         customerName: '',
         bookingId: ''
@@ -2386,11 +2388,16 @@ export function AdminDashboard({
 
                 {!editingBoard && (
                   <div className="form-group">
-                    <label className="form-lbl">จำนวนเลขทั้งหมด (เบอร์)</label>
+                    <label className="form-lbl">
+                      จำนวนเลขทั้งหมด (เบอร์)
+                      <span className="lbl-hint" style={{ color: '#06b6d4', marginLeft: '6px' }}>
+                        {(boardForm.boardType === 'duck' || boardForm.boardType === 'wheel') ? '(เริ่มที่ 01)' : '(เริ่มที่ 00)'}
+                      </span>
+                    </label>
                     <input
                       type="number"
                       className="form-input"
-                      placeholder="100"
+                      placeholder={(boardForm.boardType === 'duck' || boardForm.boardType === 'wheel') ? '30' : '100'}
                       value={boardForm.totalNumbers}
                       onChange={(e) => setBoardForm(prev => ({ ...prev, totalNumbers: e.target.value }))}
                     />
@@ -2407,7 +2414,11 @@ export function AdminDashboard({
                       key={bt.id}
                       type="button"
                       className={`board-type-pill-btn ${boardForm.boardType === bt.id ? 'active' : ''}`}
-                      onClick={() => setBoardForm(prev => ({ ...prev, boardType: bt.id }))}
+                      onClick={() => setBoardForm(prev => ({
+                        ...prev,
+                        boardType: bt.id,
+                        totalNumbers: (!editingBoard && (bt.id === 'duck' || bt.id === 'wheel') && (!prev.totalNumbers || prev.totalNumbers == 100)) ? 30 : prev.totalNumbers
+                      }))}
                     >
                       <span className="bt-icon">{bt.icon}</span>
                       <div className="bt-text-wrap">

@@ -57,16 +57,83 @@ function checkIsAdminUrl() {
   );
 }
 
+export const normalizeAndMigrateRounds = (roundsList) => {
+  if (!Array.isArray(roundsList)) return { rounds: roundsList, changed: false };
+  let globalChanged = false;
+
+  const migrated = roundsList.map(round => {
+    let roundChanged = false;
+    let newBookings = Array.isArray(round.bookings) ? [...round.bookings] : [];
+    let newNumbers = Array.isArray(round.numbers) ? [...round.numbers] : [];
+
+    // 1. Check if customer "บัง" has '00' or 0 -> change to '30'
+    newBookings = newBookings.map(b => {
+      const isBang = b.customerName === 'บัง' || b.facebookName === 'บัง' || 
+                     b.customerName?.includes('บัง') || b.facebookName?.includes('บัง') ||
+                     b.id === 'bk-1793018794797';
+      const has00 = Array.isArray(b.numbers) && b.numbers.some(n => n === '00' || n === '0' || n === 0);
+      if (isBang && has00) {
+        roundChanged = true;
+        globalChanged = true;
+        return {
+          ...b,
+          numbers: b.numbers.map(n => (n === '00' || n === '0' || n === 0) ? '30' : String(n).padStart(2, '0'))
+        };
+      }
+      return b;
+    });
+
+    // 2. In numbers array: change '00' to '30' if it belongs to บัง or if it's a 30-number wheel/duck board
+    const item00Index = newNumbers.findIndex(n => n.number === '00' || n.number === '0');
+    if (item00Index !== -1) {
+      const item00 = newNumbers[item00Index];
+      const isBang = item00.customerName === 'บัง' || item00.facebookName === 'บัง' || 
+                     item00.customerName?.includes('บัง') || item00.facebookName?.includes('บัง') ||
+                     item00.bookingId === 'bk-1793018794797';
+      const isDuckOrWheel = round.boardType === 'wheel' || round.boardType === 'duck' || 
+                            round.title?.includes('วงล้อ') || round.title?.includes('เป็ด');
+      const is30Board = newNumbers.length <= 30;
+
+      if (isBang || (isDuckOrWheel && is30Board)) {
+        roundChanged = true;
+        globalChanged = true;
+        newNumbers[item00Index] = {
+          ...item00,
+          number: '30',
+          customerName: item00.customerName || (isBang ? 'บัง' : '')
+        };
+        newNumbers.sort((a, b) => Number(a.number) - Number(b.number));
+      }
+    }
+
+    if (roundChanged) {
+      return {
+        ...round,
+        bookings: newBookings,
+        numbers: newNumbers
+      };
+    }
+    return round;
+  });
+
+  return { rounds: migrated, changed: globalChanged };
+};
+
 function App() {
   // Load rounds list from localStorage or fallback to preset rounds
   const [rounds, setRounds] = useState(() => {
     try {
       const saved = localStorage.getItem('lottery_rounds_v6');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const { rounds: migrated } = normalizeAndMigrateRounds(parsed);
+        return migrated;
+      }
     } catch (e) {
       console.error(e);
     }
-    return initialLotteryRounds;
+    const { rounds: initialMigrated } = normalizeAndMigrateRounds(initialLotteryRounds);
+    return initialMigrated;
   });
 
   // Load graded store cards list from localStorage or initial preset
@@ -126,7 +193,11 @@ function App() {
 
         if (isMounted) {
           if (cloudRounds && cloudRounds.length > 0) {
-            setRounds(cloudRounds);
+            const { rounds: migratedCloud, changed } = normalizeAndMigrateRounds(cloudRounds);
+            setRounds(migratedCloud);
+            if (changed) {
+              syncRoundsWithSupabase(migratedCloud).catch(console.error);
+            }
           } else if (cloudRounds && cloudRounds.length === 0 && rounds.length > 0) {
             // First time setup on clean Supabase database: auto-seed existing rounds
             syncRoundsWithSupabase(rounds).catch(console.error);

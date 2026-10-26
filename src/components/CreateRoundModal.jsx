@@ -54,6 +54,7 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
   const [gradient, setGradient] = useState('lime');
   const [coverImage, setCoverImage] = useState(null);
   const [pricePerNumber, setPricePerNumber] = useState(50);
+  const [totalNumbers, setTotalNumbers] = useState(30);
   const [theme, setTheme] = useState('gold');
   const [boardType, setBoardType] = useState('duck');
   const [description, setDescription] = useState('');
@@ -78,10 +79,15 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
       return;
     }
 
+    const isDuckOrWheel = boardType === 'duck' || boardType === 'wheel';
+    const count = Math.max(5, Math.min(200, Number(totalNumbers) || (isDuckOrWheel ? 30 : 100)));
+
     const newRound = {
       id: 'card-' + Date.now(),
       title: title.trim(),
-      roundName: `งวดเบอร์หวย ${title.trim()} 00-99`,
+      roundName: isDuckOrWheel 
+        ? `${title.trim()} (01-${String(count).padStart(2, '0')})` 
+        : `งวดเบอร์หวย ${title.trim()} 00-99`,
       gradient: gradient,
       coverImage: coverImage || null,
       image: coverImage || null,
@@ -94,7 +100,7 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
       sellerPhone: '089-123-4567',
       sellerLine: 'https://line.me',
       winningNumber: '',
-      numbers: generateInitialNumbers('empty'),
+      numbers: generateInitialNumbers(boardType, count),
       bookings: []
     };
 
@@ -209,7 +215,14 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
                   key={bt.id}
                   type="button"
                   className={`board-type-pill-btn ${boardType === bt.id ? 'active' : ''}`}
-                  onClick={() => setBoardType(bt.id)}
+                  onClick={() => {
+                    setBoardType(bt.id);
+                    if (bt.id === 'duck' || bt.id === 'wheel') {
+                      setTotalNumbers(30);
+                    } else {
+                      setTotalNumbers(100);
+                    }
+                  }}
                 >
                   <span className="bt-icon">{bt.icon}</span>
                   <div className="bt-text-wrap">
@@ -221,7 +234,7 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
             </div>
           </div>
 
-          {/* Price per number */}
+          {/* Price per number & Total Numbers */}
           <div className="form-row">
             <div className="form-group flex-1">
               <label className="form-label">ราคาต่อ 1 เบอร์ (บาท):</label>
@@ -235,7 +248,28 @@ export function CreateRoundModal({ isOpen, onClose, onCreateRound }) {
               />
             </div>
             <div className="form-group flex-1">
-              <label className="form-label">ธีมตาราง 00-99:</label>
+              <label className="form-label">
+                จำนวนเบอร์ทั้งหมด:
+                <span style={{ fontSize: '11px', color: '#a78bfa', marginLeft: '6px' }}>
+                  {(boardType === 'duck' || boardType === 'wheel') ? '(เริ่ม 01)' : '(เริ่ม 00)'}
+                </span>
+              </label>
+              <input
+                type="number"
+                min="5"
+                max="200"
+                className="form-input"
+                value={totalNumbers}
+                onChange={(e) => setTotalNumbers(Number(e.target.value))}
+                placeholder={boardType === 'lotto' ? '100' : '30'}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group flex-1">
+              <label className="form-label">ธีมตาราง:</label>
               <select
                 className="form-input"
                 value={theme}

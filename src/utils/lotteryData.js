@@ -17,6 +17,8 @@ export const BOARD_TYPES = {
     icon: '🦆',
     discountPerStep: 10,
     numbersPerStep: 3,
+    startNumber: 1, // วิ่งเป็ด เริ่มที่ 01
+    defaultCount: 30,
     calculateDiscount: (count) => Math.floor(count / 3) * 10
   },
   wheel: {
@@ -28,6 +30,8 @@ export const BOARD_TYPES = {
     icon: '🎡',
     discountPerStep: 10,
     numbersPerStep: 3,
+    startNumber: 1, // วงล้อ เริ่มที่ 01
+    defaultCount: 30,
     calculateDiscount: (count) => Math.floor(count / 3) * 10
   },
   lotto: {
@@ -39,6 +43,8 @@ export const BOARD_TYPES = {
     icon: '🎟️',
     discountPerStep: 10,
     numbersPerStep: 4,
+    startNumber: 0, // ทายหวย เริ่มที่ 00-99
+    defaultCount: 100,
     calculateDiscount: (count) => Math.floor(count / 4) * 10
   }
 };
@@ -57,16 +63,16 @@ export const formatThaiDate = (date = new Date()) => {
   return `${day} ${month} ${hours}:${minutes}`;
 };
 
-// Generate 100 numbers 00 to 99 with given preset booked map
-export const generateNumbersWithPreset = (presetBooked = {}) => {
+// Generate numbers list with configurable count and start number (00 or 01)
+export const generateNumbersWithPreset = (presetBooked = {}, totalCount = 100, startFrom = 0) => {
   const list = [];
-  for (let i = 0; i <= 99; i++) {
-    const numStr = i.toString().padStart(2, '0');
+  for (let i = 0; i < totalCount; i++) {
+    const numStr = (startFrom + i).toString().padStart(2, '0');
     if (presetBooked[numStr]) {
       list.push({
         number: numStr,
         status: presetBooked[numStr].status, // 'booked' (รอยอด) or 'paid' (จ่ายแล้ว)
-        customerName: presetBooked[numStr].facebookName || '',
+        customerName: presetBooked[numStr].facebookName || presetBooked[numStr].customerName || '',
         bookingId: presetBooked[numStr].bookingId || ''
       });
     } else {
@@ -81,7 +87,12 @@ export const generateNumbersWithPreset = (presetBooked = {}) => {
   return list;
 };
 
-export const generateInitialNumbers = (density = 'standard') => generateNumbersWithPreset({});
+export const generateInitialNumbers = (boardType = 'duck', customCount = null) => {
+  const typeInfo = getBoardTypeInfo(boardType);
+  const startFrom = typeInfo.startNumber ?? ((boardType === 'duck' || boardType === 'wheel') ? 1 : 0);
+  const count = customCount || typeInfo.defaultCount || (startFrom === 1 ? 30 : 100);
+  return generateNumbersWithPreset({}, count, startFrom);
+};
 
 // Exact preset matching user screenshot
 const sampleBookedNumbers = {
