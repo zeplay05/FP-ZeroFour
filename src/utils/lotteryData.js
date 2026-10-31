@@ -53,6 +53,31 @@ export const getBoardTypeInfo = (boardType = 'lotto') => {
   return BOARD_TYPES[boardType] || BOARD_TYPES.lotto;
 };
 
+/**
+ * Calculates raw price, promotional discount, and final price for a booking.
+ */
+export const calculateBookingPrice = (booking, board) => {
+  if (!booking || !board) return { rawPrice: 0, discount: 0, finalPrice: 0 };
+  const count = Array.isArray(booking.numbers) ? booking.numbers.length : 0;
+  const pricePerNum = Number(board.pricePerNumber) || 50;
+  const rawPrice = count * pricePerNum;
+
+  // If booking has an explicitly saved finalPrice
+  if (booking.finalPrice != null && typeof booking.finalPrice === 'number') {
+    const discount = booking.discount != null ? booking.discount : Math.max(0, rawPrice - booking.finalPrice);
+    return { rawPrice, discount, finalPrice: booking.finalPrice };
+  }
+
+  // Calculate promotional discount based on board type
+  const typeInfo = getBoardTypeInfo(board.boardType);
+  const discount = booking.discount != null
+    ? Number(booking.discount)
+    : (typeInfo?.calculateDiscount ? typeInfo.calculateDiscount(count) : 0);
+  const finalPrice = Math.max(0, rawPrice - discount);
+
+  return { rawPrice, discount, finalPrice };
+};
+
 export const formatThaiDate = (date = new Date()) => {
   const d = new Date(date);
   const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];

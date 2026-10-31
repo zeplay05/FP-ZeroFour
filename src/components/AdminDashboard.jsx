@@ -36,10 +36,11 @@ import {
   ChevronsRight,
   Upload,
   Database,
-  FileText
+  FileText,
+  Coins
 } from 'lucide-react';
 import { AdminMusicTab } from './AdminMusicTab';
-import { getBoardTypeInfo, BOARD_TYPES } from '../utils/lotteryData';
+import { getBoardTypeInfo, BOARD_TYPES, calculateBookingPrice } from '../utils/lotteryData';
 import { LiveClock } from './LiveClock';
 import { formatBookingTime, formatThaiDateTime } from '../utils/timeUtils';
 import { 
@@ -270,6 +271,38 @@ export function AdminDashboard({
     const paid = board.numbers.filter(n => n.status === 'paid').length;
     return { total, available, booked, paid };
   };
+
+  // Calculate total revenue, discount, and sales for currently selected board
+  const selectedBoardSales = useMemo(() => {
+    if (!selectedBoard) return { totalSold: 0, totalPaid: 0, totalPending: 0, totalDiscount: 0, totalBookedNumbers: 0, count: 0 };
+    const bookings = selectedBoard.bookings || [];
+    let totalSold = 0;
+    let totalPaid = 0;
+    let totalPending = 0;
+    let totalDiscount = 0;
+    let totalBookedNumbers = 0;
+
+    bookings.forEach(b => {
+      const { rawPrice, discount, finalPrice } = calculateBookingPrice(b, selectedBoard);
+      totalSold += finalPrice;
+      totalDiscount += discount;
+      totalBookedNumbers += (b.numbers || []).length;
+      if (b.status === 'paid') {
+        totalPaid += finalPrice;
+      } else {
+        totalPending += finalPrice;
+      }
+    });
+
+    return {
+      totalSold,
+      totalPaid,
+      totalPending,
+      totalDiscount,
+      totalBookedNumbers,
+      count: bookings.length
+    };
+  }, [selectedBoard]);
 
   // Filtered boards for List Table / Cards view
   const filteredBoards = useMemo(() => {
@@ -512,6 +545,7 @@ export function AdminDashboard({
 
     const bookingId = `bk-${Date.now()}`;
     const nowTime = Date.now();
+    const priceInfo = calculateBookingPrice({ numbers: validNums }, selectedBoard);
     const newBooking = {
       id: bookingId,
       customerName: fbName,
@@ -519,7 +553,10 @@ export function AdminDashboard({
       numbers: validNums,
       status: bookingForm.status, // 'booked' หรือ 'paid'
       createdAt: nowTime,
-      timeStr: formatBookingTime(nowTime)
+      timeStr: formatBookingTime(nowTime),
+      rawPrice: priceInfo.rawPrice,
+      discount: priceInfo.discount,
+      finalPrice: priceInfo.finalPrice
     };
 
     // Update numbers list: mark validNums as booked/paid (ลบล้างออกจากเบอร์ว่างทันที!)
@@ -1658,6 +1695,31 @@ export function AdminDashboard({
                               </div>
                             </div>
 
+                            {/* Live Price & Promo Discount Preview */}
+                            {(() => {
+                              const enteredCount = bookingForm.numbersInput
+                                .split(/[\s,]+/)
+                                .map(s => s.trim())
+                                .filter(s => s.length > 0).length;
+                              if (enteredCount === 0) return null;
+                              const preview = calculateBookingPrice({ numbers: new Array(enteredCount).fill('') }, selectedBoard);
+                              return (
+                                <div className="booking-price-preview-strip animate-fade-in">
+                                  <div className="preview-label">
+                                    <span>💰 ยอดที่ต้องชำระ ({enteredCount} เบอร์):</span>
+                                  </div>
+                                  <div className="preview-amounts">
+                                    <strong className="preview-final text-emerald">{preview.finalPrice.toLocaleString()} ฿</strong>
+                                    {preview.discount > 0 && (
+                                      <span className="preview-discount-tag text-amber">
+                                        (ลดแล้ว {preview.discount}.- จากราคาปกติ {preview.rawPrice.toLocaleString()}.-)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
                             <button type="submit" className="btn-submit-booking">
                               <Check size={16} />
                               <span>บันทึกการจอง & หักลบเลขว่างทันที</span>
@@ -1678,21 +1740,79 @@ export function AdminDashboard({
                           <div className="locked-stats-summary">
                             <div className="locked-stat-item">
                               <span className="lbl">ยอดเบอร์ที่จอง:</span>
-                              <strong className="val text-amber">{(selectedBoard.numbers || []).filter(n => n.status !== 'available').length} เบอร์</strong>
+                              <strong className="val text-amber">{selectedBoardSales.totalBookedNumbers} เบอร์</strong>
                             </div>
                             <div className="locked-stat-item">
-                              <span className="lbl">ยอดเงินรวม:</span>
-                              <strong className="val text-emerald">{((selectedBoard.numbers || []).filter(n => n.status !== 'available').length * (selectedBoard.pricePerNumber || 50)).toLocaleString()} บาท</strong>
+                              <span className="lbl">จำนวนเงินรวมที่ขาย:</span>
+                              <strong className="val text-emerald">{selectedBoardSales.totalSold.toLocaleString()} บาท</strong>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {/* Summary of Bookings Table */}
+                      {/* Summary of Bookings Table & Sales Summary Bar */}
                       <div className="bookings-summary-table-section">
-                        <h4 className="table-heading-title">
-                          รายการผู้จองในกระดานนี้ ({(selectedBoard.bookings || []).length} รายการ)
-                        </h4>
+                        
+                        {/* Board Sales Summary Bar (จำนวนเงินรวมที่ขาย & สถานะยอดเงิน) */}
+                        <div className="board-sales-summary-grid">
+                          <div className="sales-stat-card total-sales">
+                            <div className="stat-card-icon-wrap gold">
+                              <Coins size={20} />
+                            </div>
+                            <div className="stat-card-info">
+                              <span className="stat-card-label">จำนวนเงินรวมที่ขาย</span>
+                              <div className="stat-card-val-row">
+                                <strong className="stat-card-val text-gold">
+                                  {selectedBoardSales.totalSold.toLocaleString()} ฿
+                                </strong>
+                                {selectedBoardSales.totalDiscount > 0 && (
+                                  <span className="stat-discount-pill" title={`ส่วนลดรวมจากโปรโมชั่น ${selectedBoardSales.totalDiscount.toLocaleString()} ฿`}>
+                                    ลดแล้ว {selectedBoardSales.totalDiscount.toLocaleString()}.-
+                                  </span>
+                                )}
+                              </div>
+                              <span className="stat-card-sub">
+                                ขายได้ {selectedBoardSales.totalBookedNumbers} เบอร์ ({selectedBoardSales.count} รายการ)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="sales-stat-card paid-sales">
+                            <div className="stat-card-icon-wrap emerald">
+                              <CheckCircle2 size={20} />
+                            </div>
+                            <div className="stat-card-info">
+                              <span className="stat-card-label">รับเงินแล้ว (จ่ายแล้ว)</span>
+                              <strong className="stat-card-val text-emerald">
+                                {selectedBoardSales.totalPaid.toLocaleString()} ฿
+                              </strong>
+                              <span className="stat-card-sub">
+                                {(selectedBoard.bookings || []).filter(b => b.status === 'paid').length} รายการ
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="sales-stat-card pending-sales">
+                            <div className="stat-card-icon-wrap amber">
+                              <Clock size={20} />
+                            </div>
+                            <div className="stat-card-info">
+                              <span className="stat-card-label">รอยอด (ยังไม่ชำระ)</span>
+                              <strong className="stat-card-val text-amber">
+                                {selectedBoardSales.totalPending.toLocaleString()} ฿
+                              </strong>
+                              <span className="stat-card-sub">
+                                {(selectedBoard.bookings || []).filter(b => b.status !== 'paid').length} รายการ
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="table-heading-row">
+                          <h4 className="table-heading-title">
+                            รายการผู้จองในกระดานนี้ ({(selectedBoard.bookings || []).length} รายการ)
+                          </h4>
+                        </div>
 
                         {(!selectedBoard.bookings || selectedBoard.bookings.length === 0) ? (
                           <div className="empty-bookings-box">
@@ -1723,9 +1843,26 @@ export function AdminDashboard({
                                           ))}
                                         </div>
                                       </td>
-                                      <td className="td-amount">
-                                        {(b.numbers.length * (selectedBoard.pricePerNumber || 50)).toLocaleString()} ฿
-                                      </td>
+                                      {(() => {
+                                        const priceInfo = calculateBookingPrice(b, selectedBoard);
+                                        return (
+                                          <td className="td-amount">
+                                            <div className="amount-cell-wrap">
+                                              <span className="final-price-bold">
+                                                {priceInfo.finalPrice.toLocaleString()} ฿
+                                              </span>
+                                              {priceInfo.discount > 0 && (
+                                                <span 
+                                                  className="discount-pill-badge" 
+                                                  title={`ราคาปกติ ${priceInfo.rawPrice.toLocaleString()} ฿ (ลด ${priceInfo.discount} ฿ ตามโปรโมชั่น)`}
+                                                >
+                                                  ลด {priceInfo.discount}.-
+                                                </span>
+                                              )}
+                                            </div>
+                                          </td>
+                                        );
+                                      })()}
                                       <td className="td-time">
                                         <span 
                                           className="admin-booking-time-badge"
@@ -1768,6 +1905,25 @@ export function AdminDashboard({
                                     </tr>
                                   ))}
                                 </tbody>
+                                <tfoot>
+                                  <tr className="admin-table-total-row">
+                                    <td colSpan={2} className="td-total-label">
+                                      <strong>รวมยอดทั้งกระดาน ({selectedBoardSales.totalBookedNumbers} เบอร์)</strong>
+                                    </td>
+                                    <td className="td-amount td-total-amount">
+                                      <strong className="text-gold">{selectedBoardSales.totalSold.toLocaleString()} ฿</strong>
+                                      {selectedBoardSales.totalDiscount > 0 && (
+                                        <span className="total-discount-hint">
+                                          (ลดรวม {selectedBoardSales.totalDiscount.toLocaleString()}.-)
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td colSpan={3} className="td-total-meta">
+                                      <span className="total-paid-tag">จ่ายแล้ว: {selectedBoardSales.totalPaid.toLocaleString()} ฿</span>
+                                      <span className="total-pending-tag">รอยอด: {selectedBoardSales.totalPending.toLocaleString()} ฿</span>
+                                    </td>
+                                  </tr>
+                                </tfoot>
                               </table>
                             </div>
 

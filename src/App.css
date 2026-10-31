@@ -12830,5 +12830,283 @@ html, body {
   }
 }
 
+/* ==========================================================================
+   BOARD SALES SUMMARY & DISCOUNTED PRICE STYLES (หลังบ้าน)
+   ========================================================================== */
+
+/* Live Price Preview in Booking Form */
+.booking-price-preview-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 9px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-family: var(--font-thai, system-ui);
+}
+
+.booking-price-preview-strip .preview-label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.booking-price-preview-strip .preview-amounts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.booking-price-preview-strip .preview-final {
+  font-size: 16px;
+  font-weight: 700;
+  color: #10b981;
+  font-family: 'Outfit', monospace, system-ui;
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.booking-price-preview-strip .preview-discount-tag {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* Board Sales Summary Grid (จำนวนเงินรวมที่ขาย) */
+.board-sales-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.sales-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(18, 23, 37, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+  transition: all 0.25s ease;
+}
+
+.sales-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.3);
+}
+
+.sales-stat-card.total-sales {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(18, 23, 37, 0.85) 100%);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.sales-stat-card.paid-sales {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(18, 23, 37, 0.85) 100%);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.sales-stat-card.pending-sales {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(18, 23, 37, 0.85) 100%);
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.stat-card-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-card-icon-wrap.gold {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.stat-card-icon-wrap.emerald {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.stat-card-icon-wrap.amber {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.2);
+}
+
+.stat-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.stat-card-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.stat-card-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat-card-val {
+  font-size: 20px;
+  font-weight: 800;
+  font-family: 'Outfit', monospace, system-ui;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.stat-card-val.text-gold {
+  color: #facc15;
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
+}
+
+.stat-card-val.text-emerald {
+  color: #34d399;
+  text-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
+}
+
+.stat-card-val.text-amber {
+  color: #fb923c;
+  text-shadow: 0 0 12px rgba(251, 146, 60, 0.4);
+}
+
+.stat-discount-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.stat-card-sub {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Amount Cell with Discount Tag in Bookings Table */
+.amount-cell-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.final-price-bold {
+  font-weight: 700;
+  font-size: 14px;
+  color: #f8fafc;
+  font-family: 'Outfit', monospace, system-ui;
+  letter-spacing: 0.3px;
+}
+
+.discount-pill-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+  line-height: 1.3;
+}
+
+/* Table Footer (tfoot) summary row */
+.admin-table-total-row {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border-top: 2px solid rgba(245, 158, 11, 0.35);
+  font-size: 13px;
+}
+
+.td-total-label {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.td-total-amount {
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.td-total-amount .text-gold {
+  color: #facc15;
+  font-family: 'Outfit', monospace, system-ui;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.total-discount-hint {
+  display: block;
+  font-size: 11px;
+  color: #34d399;
+  font-weight: 600;
+}
+
+.td-total-meta {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.total-paid-tag {
+  display: inline-block;
+  margin-right: 12px;
+  color: #34d399;
+  font-weight: 600;
+}
+
+.total-pending-tag {
+  display: inline-block;
+  color: #fb923c;
+  font-weight: 600;
+}
+
+/* Mobile responsive for Board Sales Summary */
+@media (max-width: 900px) {
+  .board-sales-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .sales-stat-card {
+    padding: 12px 14px;
+  }
+}
+
+
 
 
