@@ -3395,7 +3395,16 @@ body {
 /* Actions Row (Send FB Button) */
 .select-actions-row {
   display: flex;
+  gap: 12px;
   width: 100%;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .select-actions-row {
+    flex-direction: column;
+    gap: 10px;
+  }
 }
 
 .btn-action-send-fb {
@@ -3404,6 +3413,34 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  background: linear-gradient(135deg, #0084ff 0%, #0066ff 50%, #4338ca 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  padding: 13px 18px;
+  border-radius: 12px;
+  font-family: var(--font-thai);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 132, 255, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex: 1.2;
+}
+
+.btn-action-send-fb:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1a8fff 0%, #0077ff 50%, #4f46e5 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 132, 255, 0.55);
+}
+
+.btn-action-send-fb:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-action-send-fb:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Action Button: Confirm Booking */

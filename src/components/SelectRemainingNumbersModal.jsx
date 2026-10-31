@@ -405,8 +405,19 @@ export function SelectRemainingNumbersModal({
             </div>
           </div>
 
-          {/* Action Buttons: ยืนยันจอง */}
+          {/* Action Buttons: ส่งเข้าแชทเฟส (Messenger) แบบเดิม + ชำระเงิน & แนบสลิปผ่านเว็บ */}
           <div className="select-actions-row">
+            <button
+              type="button"
+              className="btn-action-send-fb"
+              onClick={handleOpenMessenger}
+              disabled={selectedNumbers.length === 0}
+            >
+              <MessageCircle size={19} />
+              <span>ส่งเข้าแชทเฟส (Messenger) {count > 0 ? `(${count} เบอร์)` : ''}</span>
+              <ExternalLink size={15} className="send-ext-icon" />
+            </button>
+
             <button
               type="button"
               className="btn-action-pay-web"
@@ -420,19 +431,15 @@ export function SelectRemainingNumbersModal({
               disabled={selectedNumbers.length === 0}
             >
               <CreditCard size={19} />
-              <span>💳 ชำระเงิน & แนบสลิปผ่านเว็บ {count > 0 ? `(${finalTotal.toLocaleString()} ฿)` : ''}</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-action-confirm-booking secondary-chat-btn"
-              onClick={handleConfirmBooking}
-              disabled={selectedNumbers.length === 0}
-            >
-              <MessageCircle size={18} />
-              <span>ส่งข้อความหาแอดมิน (Messenger)</span>
+              <span>💳 ชำระเงิน & แนบสลิปผ่านเว็บ</span>
             </button>
           </div>
+
+          {copied && (
+            <div className="copy-hint-pill animate-fade-in">
+              ✨ คัดลอกข้อความให้อัตโนมัติแล้ว! สามารถกด "วาง (Paste)" ในแชทได้ทันที
+            </div>
+          )}
 
         </div>
 
