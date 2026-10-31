@@ -26,6 +26,7 @@ import {
   subscribeToRealtimeStoreCards,
   deleteRoundFromSupabase
 } from './utils/supabaseClient';
+import { DEFAULT_PAYMENT_CONFIG } from './utils/promptpay';
 import confetti from 'canvas-confetti';
 import './App.css';
 
@@ -138,6 +139,17 @@ function App() {
   });
 
   // Load graded store cards list from localStorage or initial preset
+  // Payment configuration (PromptPay & Bank Details)
+  const [paymentConfig, setPaymentConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fp_payment_config');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return DEFAULT_PAYMENT_CONFIG;
+  });
+
   const [storeCards, setStoreCards] = useState(() => {
     try {
       const saved = localStorage.getItem('fp_store_cards_v1');
@@ -186,10 +198,11 @@ function App() {
     let isMounted = true;
     async function loadCloudData() {
       try {
-        const [cloudRounds, cloudCards, cloudFbLink] = await Promise.all([
+        const [cloudRounds, cloudCards, cloudFbLink, cloudPaymentSettings] = await Promise.all([
           fetchRoundsFromSupabase(),
           fetchStoreCardsFromSupabase(),
-          fetchSettingFromSupabase('seller_fb_link')
+          fetchSettingFromSupabase('seller_fb_link'),
+          fetchSettingFromSupabase('payment_settings')
         ]);
 
         if (isMounted) {
@@ -213,6 +226,16 @@ function App() {
 
           if (cloudFbLink) {
             localStorage.setItem('seller_fb_link', cloudFbLink);
+          }
+
+          if (cloudPaymentSettings) {
+            try {
+              const parsed = typeof cloudPaymentSettings === 'string' ? JSON.parse(cloudPaymentSettings) : cloudPaymentSettings;
+              setPaymentConfig(parsed);
+              localStorage.setItem('fp_payment_config', JSON.stringify(parsed));
+            } catch (e) {
+              console.error('[Supabase] Error parsing payment settings:', e);
+            }
           }
         }
       } catch (err) {
@@ -410,6 +433,8 @@ function App() {
           storeCards={storeCards}
           onUpdateStoreCards={handleUpdateStoreCards}
           onExitAdmin={handleNavHome}
+          paymentConfig={paymentConfig}
+          onUpdatePaymentConfig={setPaymentConfig}
         />
       </div>
     );
@@ -455,6 +480,7 @@ function App() {
           onBackToGallery={handleBackToGallery}
           onDeleteRound={handleDeleteRound}
           onUpdateRoundBookings={handleUpdateRoundBookings}
+          paymentConfig={paymentConfig}
         />
       )}
 

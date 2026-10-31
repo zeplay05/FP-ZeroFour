@@ -10,20 +10,26 @@ import {
   ShoppingBag,
   CheckCircle2,
   Copy,
+  CreditCard
 } from 'lucide-react';
 import { getBoardTypeInfo } from '../utils/lotteryData';
+import { formatBookingTime } from '../utils/timeUtils';
+import { PaymentCheckoutModal } from './PaymentCheckoutModal';
 
 export function SelectRemainingNumbersModal({
   isOpen,
   onClose,
   round,
-  availableNumbers = []
+  availableNumbers = [],
+  onUpdateRoundBookings,
+  paymentConfig
 }) {
   const [selectedNumbers, setSelectedNumbers] = useState([]);
   const [customerName, setCustomerName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   
   // Seller Facebook Page or Messenger link (Admin configured)
   const sellerFbUrl = useMemo(() => {
@@ -175,6 +181,47 @@ export function SelectRemainingNumbersModal({
       console.warn('Clipboard write failed', e);
     }
     setShowSuccessModal(true);
+  };
+
+  // Handle booking completion with PromptPay slip upload
+  const handleCompleteBookingWithSlip = async (bookingData) => {
+    const newBookingId = `book-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newBooking = {
+      id: newBookingId,
+      customerName: bookingData.customerName,
+      facebookName: bookingData.customerName,
+      customerContact: bookingData.customerContact || '',
+      numbers: [...bookingData.numbers],
+      price: bookingData.finalPrice,
+      discount: bookingData.discount || 0,
+      status: 'booked',
+      paymentStatus: 'pending_verification',
+      slipImage: bookingData.slipImage,
+      paymentMethod: 'promptpay_slip',
+      note: bookingData.note || '',
+      createdAt: new Date().toISOString(),
+      timeStr: formatBookingTime(Date.now())
+    };
+
+    const updatedNumbers = (round?.numbers || []).map(numObj => {
+      if (bookingData.numbers.includes(numObj.number)) {
+        return {
+          ...numObj,
+          status: 'booked',
+          customerName: bookingData.customerName,
+          bookingId: newBookingId
+        };
+      }
+      return numObj;
+    });
+
+    const updatedBookings = [newBooking, ...(round?.bookings || [])];
+
+    if (onUpdateRoundBookings) {
+      await onUpdateRoundBookings(round.id, updatedNumbers, updatedBookings);
+    }
+
+    setSelectedNumbers([]);
   };
 
   return (
@@ -362,12 +409,28 @@ export function SelectRemainingNumbersModal({
           <div className="select-actions-row">
             <button
               type="button"
-              className="btn-action-confirm-booking"
+              className="btn-action-pay-web"
+              onClick={() => {
+                if (selectedNumbers.length === 0) {
+                  alert('กรุณาเลือกเบอร์ที่ต้องการก่อนครับ');
+                  return;
+                }
+                setIsCheckoutOpen(true);
+              }}
+              disabled={selectedNumbers.length === 0}
+            >
+              <CreditCard size={19} />
+              <span>💳 ชำระเงิน & แนบสลิปผ่านเว็บ {count > 0 ? `(${finalTotal.toLocaleString()} ฿)` : ''}</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-action-confirm-booking secondary-chat-btn"
               onClick={handleConfirmBooking}
               disabled={selectedNumbers.length === 0}
             >
-              <CheckCircle2 size={19} />
-              <span>ยืนยันจอง {count > 0 ? `(${count} เบอร์)` : ''}</span>
+              <MessageCircle size={18} />
+              <span>ส่งข้อความหาแอดมิน (Messenger)</span>
             </button>
           </div>
 
@@ -419,6 +482,17 @@ export function SelectRemainingNumbersModal({
               <div className="booking-success-actions">
                 <button
                   type="button"
+                  className="btn-modal-pay-direct"
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setIsCheckoutOpen(true);
+                  }}
+                >
+                  <CreditCard size={18} />
+                  <span>💳 ชำระเงิน & แนบสลิปผ่านเว็บตอนนี้</span>
+                </button>
+                <button
+                  type="button"
                   className="btn-modal-chat-admin"
                   onClick={handleOpenMessenger}
                 >
@@ -459,6 +533,21 @@ export function SelectRemainingNumbersModal({
         )}
 
       </div>
+
+      {/* Payment & PromptPay Checkout Modal */}
+      <PaymentCheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        round={round}
+        selectedNumbers={selectedNumbers}
+        customerName={customerName}
+        finalTotal={finalTotal}
+        rawTotal={rawTotal}
+        discount={discount}
+        paymentConfig={paymentConfig}
+        onCompleteBooking={handleCompleteBookingWithSlip}
+      />
+
     </div>
   );
 }

@@ -40,6 +40,8 @@ import {
   Coins
 } from 'lucide-react';
 import { AdminMusicTab } from './AdminMusicTab';
+import { SlipViewerModal } from './SlipViewerModal';
+import { PaymentSettingsModal } from './PaymentSettingsModal';
 import { getBoardTypeInfo, BOARD_TYPES, calculateBookingPrice } from '../utils/lotteryData';
 import { LiveClock } from './LiveClock';
 import { formatBookingTime, formatThaiDateTime } from '../utils/timeUtils';
@@ -105,7 +107,9 @@ export function AdminDashboard({
   onUpdateRounds,
   storeCards,
   onUpdateStoreCards,
-  onExitAdmin
+  onExitAdmin,
+  paymentConfig,
+  onUpdatePaymentConfig
 }) {
   // Admin Password Gate (รหัสผ่านเข้าสู่ระบบหลังบ้าน)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -122,6 +126,10 @@ export function AdminDashboard({
 
   // Selected board for booking management (1.1 กระดานที่จะระบุเบอร์ที่จอง - null เพื่อแสดงเฉพาะตาราง)
   const [selectedBoardId, setSelectedBoardId] = useState(null);
+
+  // Slip Viewer & Payment Settings modal states
+  const [selectedSlipBooking, setSelectedSlipBooking] = useState(null);
+  const [isPaymentSettingsOpen, setIsPaymentSettingsOpen] = useState(false);
 
   // Search & Filter states for Boards
   const [boardSearchQuery, setBoardSearchQuery] = useState('');
@@ -599,6 +607,48 @@ export function AdminDashboard({
   };
 
   // Toggle booking status between 'booked' (รอยอด) and 'paid' (จ่ายแล้ว)
+  // 1-Click Approve Slip & Mark as Paid
+  const handleApproveSlip = (bookingId) => {
+    if (!selectedBoard || selectedBoard.status === 'drawn') return;
+    const booking = (selectedBoard.bookings || []).find(b => b.id === bookingId);
+    if (!booking) return;
+
+    const updatedBookings = selectedBoard.bookings.map(b => {
+      if (b.id === bookingId) {
+        return { 
+          ...b, 
+          status: 'paid', 
+          paymentStatus: 'approved',
+          approvedAt: new Date().toISOString() 
+        };
+      }
+      return b;
+    });
+
+    const updatedNumbers = selectedBoard.numbers.map(n => {
+      const isMatch = n.bookingId === bookingId || (booking.numbers && booking.numbers.includes(n.number));
+      if (isMatch) {
+        return { ...n, status: 'paid' };
+      }
+      return n;
+    });
+
+    const updatedRounds = rounds.map(r => {
+      if (r.id === selectedBoard.id) {
+        return {
+          ...r,
+          bookings: updatedBookings,
+          numbers: updatedNumbers
+        };
+      }
+      return r;
+    });
+
+    onUpdateRounds(updatedRounds);
+    showNotice(`อนุมัติสลิปของ "${booking.customerName}" เรียบร้อยแล้ว (สถานะ: จ่ายแล้ว)`);
+    setSelectedSlipBooking(prev => prev ? { ...prev, status: 'paid' } : null);
+  };
+
   const handleToggleBookingStatus = (bookingId) => {
     if (!selectedBoard || selectedBoard.status === 'drawn') return;
     const booking = (selectedBoard.bookings || []).find(b => b.id === bookingId);
@@ -1037,14 +1087,25 @@ export function AdminDashboard({
                     คลิกที่แถวกระดานหรือกดปุ่ม "🎯 จัดการเบอร์" เพื่อเข้าไประบุเบอร์ที่ลูกค้าจอง ตรวจสอบตาราง 00-99 และสรุปยอด
                   </p>
                 </div>
-            <button
-              type="button"
-              className="btn-admin-primary"
-              onClick={openNewBoardModal}
-            >
-              <Plus size={16} />
-              <span>+ เพิ่มกระดานใหม่</span>
-            </button>
+            <div className="admin-header-actions-group">
+              <button
+                type="button"
+                className="btn-admin-payment-config"
+                onClick={() => setIsPaymentSettingsOpen(true)}
+                title="ตั้งค่าพร้อมเพย์ & บัญชีรับเงินของร้าน"
+              >
+                <CreditCard size={16} />
+                <span>💳 ตั้งค่าพร้อมเพย์</span>
+              </button>
+              <button
+                type="button"
+                className="btn-admin-primary"
+                onClick={openNewBoardModal}
+              >
+                <Plus size={16} />
+                <span>+ เพิ่มกระดานใหม่</span>
+              </button>
+            </div>
           </div>
 
           {/* Admin Seller FB Messenger Settings Box */}
@@ -1867,6 +1928,21 @@ export function AdminDashboard({
                                           <span>{formatBookingTime(b.createdAt || b.timeStr) || '-'}</span>
                                         </span>
                                       </td>
+                                      <td className="td-slip">
+                                        {b.slipImage ? (
+                                          <button
+                                            type="button"
+                                            className={`btn-table-slip ${b.status === 'paid' ? 'verified' : 'pending'}`}
+                                            onClick={() => setSelectedSlipBooking(b)}
+                                            title="คลิกเพื่อตรวจสอบสลิปโอนเงิน"
+                                          >
+                                            <span>🧾 ดูสลิป</span>
+                                            {b.status !== 'paid' && <span className="slip-pulse-indicator" />}
+                                          </button>
+                                        ) : (
+                                          <span className="text-muted-dash">-</span>
+                                        )}
+                                      </td>
                                       <td>
                                         {!isCurrentBoardClosed ? (
                                           <button
@@ -1913,7 +1989,7 @@ export function AdminDashboard({
                                         </span>
                                       )}
                                     </td>
-                                    <td colSpan={3} className="td-total-meta">
+                                    <td colSpan={4} className="td-total-meta">
                                       <span className="total-paid-tag">จ่ายแล้ว: {selectedBoardSales.totalPaid.toLocaleString()} ฿</span>
                                       <span className="total-pending-tag">รอยอด: {selectedBoardSales.totalPending.toLocaleString()} ฿</span>
                                     </td>
@@ -2941,6 +3017,28 @@ export function AdminDashboard({
           </div>
         </div>
       )}
+
+      {/* Slip Viewer Modal for Admin Inspection & 1-Click Approval */}
+      <SlipViewerModal
+        isOpen={Boolean(selectedSlipBooking)}
+        onClose={() => setSelectedSlipBooking(null)}
+        booking={selectedSlipBooking}
+        round={selectedBoard}
+        onApprovePaid={handleApproveSlip}
+      />
+
+      {/* Payment Configuration Modal */}
+      <PaymentSettingsModal
+        isOpen={isPaymentSettingsOpen}
+        onClose={() => setIsPaymentSettingsOpen(false)}
+        paymentConfig={paymentConfig}
+        onSaveConfig={(newConfig) => {
+          if (onUpdatePaymentConfig) {
+            onUpdatePaymentConfig(newConfig);
+          }
+          showNotice('บันทึกการตั้งค่าชำระเงินเรียบร้อยแล้ว');
+        }}
+      />
 
     </div>
   );

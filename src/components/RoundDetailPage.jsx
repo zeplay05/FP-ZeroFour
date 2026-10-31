@@ -18,7 +18,8 @@ export function RoundDetailPage({
   round,
   onBackToGallery,
   onDeleteRound,
-  onUpdateRoundBookings
+  onUpdateRoundBookings,
+  paymentConfig
 }) {
   const [historySearch, setHistorySearch] = useState('');
   const [isRemainingModalOpen, setIsRemainingModalOpen] = useState(false);
@@ -337,6 +338,8 @@ export function RoundDetailPage({
           onClose={() => setIsRemainingModalOpen(false)}
           round={round}
           availableNumbers={availableNumbers}
+          onUpdateRoundBookings={onUpdateRoundBookings}
+          paymentConfig={paymentConfig}
         />
       )}
 
