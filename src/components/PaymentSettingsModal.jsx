@@ -48,7 +48,7 @@ export function PaymentSettingsModal({
 
   if (!isOpen) return null;
 
-  const previewQrUrl = getPromptPayQrUrl(formData.promptPayId, Number(testAmount) || 0);
+  const previewQrUrl = formData.qrImageUrl || '/promptpay-qr.jpg';
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -288,3 +288,4 @@ export function PaymentSettingsModal({
     </div>
   );
 }
+

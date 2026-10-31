@@ -69,9 +69,10 @@ export function getPromptPayQrUrl(target, amount) {
 }
 
 export const DEFAULT_PAYMENT_CONFIG = {
-  promptPayId: '0812345678',
-  accountName: 'FP ZEROFOUR',
-  bankName: 'ธนาคารกสิกรไทย (KBANK)',
-  accountNumber: '123-4-56789-0',
-  qrImageUrl: '' // Optional uploaded QR image
+  promptPayId: '004666018715494',
+  accountName: 'น.ส. กรณิศ เปรุนาวิน',
+  bankName: 'Make by KBank (ธนาคารกสิกรไทย)',
+  accountNumber: 'xxx-x-x9591-x',
+  qrImageUrl: '/promptpay-qr.jpg'
 };
+

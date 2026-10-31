@@ -5,20 +5,24 @@ import {
   Copy, 
   Upload, 
   Download, 
-  QrCode, 
   CreditCard, 
   CheckCircle2, 
   AlertCircle,
   Clock,
   Sparkles,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  User,
+  Phone,
+  FileImage,
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { getPromptPayQrUrl, DEFAULT_PAYMENT_CONFIG } from '../utils/promptpay';
+import { DEFAULT_PAYMENT_CONFIG, getPromptPayQrUrl } from '../utils/promptpay';
 import { formatBookingTime } from '../utils/timeUtils';
 
-// Helper to compress image into Base64 Data URL
+// Helper to compress image into Base64 Data URL (fast loading & database friendly)
 function compressImage(file, maxWidth = 800, quality = 0.75) {
   return new Promise((resolve, reject) => {
     if (!file) return resolve(null);
@@ -73,11 +77,14 @@ export function PaymentCheckoutModal({
   const [isSuccess, setIsSuccess] = useState(false);
   const [copiedAcc, setCopiedAcc] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
+  const [copiedName, setCopiedName] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setCustomerName(initialName || '');
+      setCustomerContact('');
+      setNote('');
       setSlipFile(null);
       setSlipPreview(null);
       setIsSubmitting(false);
@@ -88,8 +95,14 @@ export function PaymentCheckoutModal({
 
   if (!isOpen || !round) return null;
 
-  const promptPayTarget = paymentConfig.promptPayId || DEFAULT_PAYMENT_CONFIG.promptPayId;
-  const qrUrl = paymentConfig.qrImageUrl || getPromptPayQrUrl(promptPayTarget, finalTotal);
+  // Resolved payment configuration
+  const resolvedConfig = {
+    ...DEFAULT_PAYMENT_CONFIG,
+    ...paymentConfig
+  };
+
+  // QR Code Image source: Use user's uploaded Make by KBank QR image by default
+  const qrImageSrc = resolvedConfig.qrImageUrl || '/promptpay-qr.jpg';
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -101,31 +114,37 @@ export function PaymentCheckoutModal({
       setSlipPreview(base64);
     } catch (err) {
       console.error(err);
-      setErrorMessage('ไม่สามารถโหลดรูปภาพสลิปได้ โปรดลองอีกครั้ง');
+      setErrorMessage('ไม่สามารถโหลดภาพสลิปได้ กรุณาลองใหม่อีกครั้ง');
     }
   };
 
   const handleCopyAccount = () => {
-    const accNum = paymentConfig.accountNumber || DEFAULT_PAYMENT_CONFIG.accountNumber;
+    const accNum = resolvedConfig.accountNumber || DEFAULT_PAYMENT_CONFIG.accountNumber;
     navigator.clipboard.writeText(accNum.replace(/-/g, ''));
     setCopiedAcc(true);
-    setTimeout(() => setCopiedAcc(false), 2500);
+    setTimeout(() => setCopiedAcc(false), 2200);
   };
 
   const handleCopyAmount = () => {
     navigator.clipboard.writeText(String(finalTotal));
     setCopiedAmount(true);
-    setTimeout(() => setCopiedAmount(false), 2500);
+    setTimeout(() => setCopiedAmount(false), 2200);
+  };
+
+  const handleCopyName = () => {
+    navigator.clipboard.writeText(resolvedConfig.accountName);
+    setCopiedName(true);
+    setTimeout(() => setCopiedName(false), 2200);
   };
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     if (!customerName.trim()) {
-      setErrorMessage('กรุณาระบุชื่อเฟสบุ๊ค หรือชื่อผู้จอง');
+      setErrorMessage('กรุณาระบุชื่อเฟสบุ๊ค หรือชื่อผู้จองของคุณครับ');
       return;
     }
     if (!slipPreview) {
-      setErrorMessage('กรุณาแนบภาพสลิปการโอนเงินเพื่อยืนยันการจอง');
+      setErrorMessage('กรุณาแนบภาพสลิปการโอนเงินเพื่อยืนยันรายการครับ');
       return;
     }
 
@@ -139,7 +158,7 @@ export function PaymentCheckoutModal({
         customerContact: customerContact.trim(),
         numbers: selectedNumbers,
         note: note.trim(),
-        status: 'booked', // Mark as booked (ติดจอง/รอตรวจสลิป)
+        status: 'booked',
         paymentStatus: 'pending_verification',
         slipImage: slipPreview,
         rawPrice: rawTotal,
@@ -155,7 +174,11 @@ export function PaymentCheckoutModal({
       }
 
       setIsSuccess(true);
-      confetti({ particleCount: 70, spread: 60 });
+      try {
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+      } catch (e) {
+        // Confetti optional
+      }
     } catch (err) {
       console.error(err);
       setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการส่งข้อมูล');
@@ -167,304 +190,342 @@ export function PaymentCheckoutModal({
   return (
     <div className="payment-checkout-backdrop animate-fade-in" onClick={onClose}>
       <div 
-        className="payment-checkout-card" 
+        className="payment-checkout-card animate-scale-up" 
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        {/* Header */}
+        
+        {/* Modal Top Header */}
         <div className="checkout-modal-header">
           <div className="checkout-header-info">
             <div className="checkout-title-row">
               <span className="checkout-badge-pill">
                 <ShieldCheck size={14} /> ชำระเงินผ่านเว็บไซต์
               </span>
+              <span className="checkout-secure-txt">ปลอดภัย 100% • ตรวจสอบสลิปผ่านระบบ</span>
             </div>
-            <h3 className="checkout-main-title">{round.title}</h3>
+            <h3 className="checkout-main-title">{round.title || 'รายการจองเลขท้าย'}</h3>
           </div>
           <button 
             type="button" 
             className="btn-checkout-close" 
             onClick={onClose}
-            aria-label="ปิด"
+            aria-label="ปิดหน้าต่าง"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Body Content */}
+        {/* Modal Body */}
         {!isSuccess ? (
-          <form onSubmit={handleSubmitPayment} className="checkout-body-content">
+          <form onSubmit={handleSubmitPayment} className="checkout-modal-body">
             
-            {/* Top Order Summary Strip */}
-            <div className="checkout-summary-box">
-              <div className="summary-left-nums">
-                <span className="summary-label">เลขที่จอง ({selectedNumbers.length} เบอร์):</span>
-                <div className="checkout-numbers-wrap">
-                  {selectedNumbers.map(n => (
-                    <span key={n} className="checkout-num-chip">{n}</span>
+            {/* Top Summary Banner: Selected Numbers + Amount */}
+            <div className="checkout-summary-banner">
+              <div className="summary-banner-left">
+                <span className="summary-banner-label">เบอร์ที่เลือกจอง ({selectedNumbers.length} เบอร์):</span>
+                <div className="checkout-numbers-pills">
+                  {selectedNumbers.map(num => (
+                    <span key={num} className="checkout-number-pill">{num}</span>
                   ))}
                 </div>
               </div>
 
-              <div className="summary-right-total">
+              <div className="summary-banner-right">
                 {discount > 0 && (
-                  <span className="checkout-discount-tag">
-                    ลดแล้ว {discount}.- (จาก {rawTotal}.-)
+                  <span className="checkout-discount-badge">
+                    🎉 ได้รับส่วนลด {discount}.-
                   </span>
                 )}
-                <div className="checkout-amount-display">
-                  <span className="amount-label">ยอดที่ต้องโอน:</span>
-                  <strong className="amount-val text-gold">{finalTotal.toLocaleString()} ฿</strong>
+                <div className="checkout-total-group">
+                  <span className="checkout-total-label">ยอดที่ต้องโอนสุทธิ:</span>
+                  <div className="checkout-total-figure">
+                    <span className="total-gold-num">{finalTotal.toLocaleString()}</span>
+                    <span className="total-currency">บาท</span>
+                    <button
+                      type="button"
+                      className="btn-copy-amount-pill"
+                      onClick={handleCopyAmount}
+                      title="คัดลอกยอดเงินที่ต้องโอน"
+                    >
+                      {copiedAmount ? <Check size={12} /> : <Copy size={12} />}
+                      <span>{copiedAmount ? 'คัดลอกแล้ว' : 'คัดลอกยอด'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Error Message if any */}
+            {/* Error Banner Alert */}
             {errorMessage && (
               <div className="checkout-error-banner animate-fade-in">
-                <AlertCircle size={16} />
+                <AlertCircle size={16} className="flex-shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
 
-            {/* Middle Section: QR Code & Bank Account Transfer Info */}
-            <div className="checkout-payment-grid">
+            {/* Main 2-Column Responsive Content */}
+            <div className="checkout-main-grid">
               
-              {/* QR Code Container */}
-              <div className="qr-payment-container">
-                <div className="promptpay-logo-strip">
-                  <span className="promptpay-thai-txt">พร้อมเพย์</span>
-                  <span className="promptpay-en-txt">PromptPay</span>
-                </div>
+              {/* COLUMN 1: QR Code Card & Bank Details */}
+              <div className="checkout-col-payment">
+                
+                {/* Clean QR Display Frame */}
+                <div className="make-qr-card-box">
+                  <div className="qr-badge-strip">
+                    <span className="qr-badge-make">make by KBank</span>
+                    <span className="qr-badge-pp">PromptPay • Thai QR</span>
+                  </div>
 
-                <div className="qr-image-wrapper">
-                  {qrUrl ? (
+                  <div className="qr-image-frame-container">
                     <img 
-                      src={qrUrl} 
-                      alt="PromptPay QR Code" 
-                      className="promptpay-qr-img" 
+                      src={qrImageSrc} 
+                      alt="Make by KBank PromptPay QR" 
+                      className="make-qr-main-img" 
                     />
-                  ) : (
-                    <div className="qr-loading-box">
-                      <QrCode size={40} className="text-muted" />
-                      <span>กำลังสร้าง QR Code...</span>
+                  </div>
+
+                  <div className="qr-bottom-meta">
+                    <div className="qr-account-holder">
+                      <span className="holder-label">ชื่อบัญชีรับเงิน:</span>
+                      <strong className="holder-name">{resolvedConfig.accountName}</strong>
                     </div>
-                  )}
-                </div>
-
-                <div className="qr-scan-hint">
-                  <span className="scan-icon">📱</span>
-                  <span>สแกน QR Code ด้วยแอปธนาคารทุกแห่ง</span>
-                </div>
-
-                {qrUrl && (
-                  <a
-                    href={qrUrl}
-                    download={`promptpay-${finalTotal}-baht.png`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn-download-qr"
-                  >
-                    <Download size={13} />
-                    <span>บันทึกภาพ QR Code</span>
-                  </a>
-                )}
-              </div>
-
-              {/* Bank Details & Copy */}
-              <div className="bank-details-container">
-                <h4 className="bank-box-title">
-                  <CreditCard size={16} /> หรือโอนผ่านเลขที่บัญชี
-                </h4>
-
-                <div className="bank-info-card">
-                  <div className="bank-row">
-                    <span className="bank-label">ธนาคาร:</span>
-                    <strong className="bank-val text-cyan">
-                      {paymentConfig.bankName || DEFAULT_PAYMENT_CONFIG.bankName}
-                    </strong>
+                    <div className="qr-bank-tag">
+                      <span>{resolvedConfig.bankName}</span>
+                      {resolvedConfig.accountNumber && (
+                        <span> • {resolvedConfig.accountNumber}</span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="bank-row">
-                    <span className="bank-label">ชื่อบัญชี:</span>
-                    <strong className="bank-val">
-                      {paymentConfig.accountName || DEFAULT_PAYMENT_CONFIG.accountName}
-                    </strong>
+                  {/* QR Action Buttons */}
+                  <div className="qr-actions-row">
+                    <a
+                      href={qrImageSrc}
+                      download={`Make-QR-${finalTotal}-Baht.jpg`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-qr-download"
+                    >
+                      <Download size={14} />
+                      <span>บันทึกรูป QR ลงเครื่อง</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Account Details Copy Card */}
+                <div className="bank-account-copy-card">
+                  <div className="copy-card-heading">
+                    <CreditCard size={14} className="text-cyan" />
+                    <span>ข้อมูลบัญชีธนาคาร (โอนผ่านเลขบัญชี)</span>
                   </div>
 
-                  <div className="bank-row highlighted">
-                    <span className="bank-label">เลขที่บัญชี:</span>
-                    <div className="acc-num-row">
-                      <strong className="bank-acc-digits">
-                        {paymentConfig.accountNumber || DEFAULT_PAYMENT_CONFIG.accountNumber}
-                      </strong>
+                  <div className="copy-card-row">
+                    <span className="copy-row-label">ธนาคาร:</span>
+                    <strong className="copy-row-val text-cyan">{resolvedConfig.bankName}</strong>
+                  </div>
+
+                  <div className="copy-card-row">
+                    <span className="copy-row-label">ชื่อบัญชี:</span>
+                    <div className="copy-row-interactive">
+                      <strong className="copy-row-val">{resolvedConfig.accountName}</strong>
                       <button
                         type="button"
-                        className="btn-copy-mini"
-                        onClick={handleCopyAccount}
-                        title="คลิกเพื่อคัดลอกเลขบัญชี"
+                        className="btn-copy-chip"
+                        onClick={handleCopyName}
+                        title="คัดลอกชื่อบัญชี"
                       >
-                        {copiedAcc ? <Check size={13} /> : <Copy size={13} />}
+                        {copiedName ? <Check size={11} /> : <Copy size={11} />}
+                        <span>{copiedName ? 'คัดลอกแล้ว' : 'คัดลอก'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="copy-card-row highlight-acc">
+                    <span className="copy-row-label">เลขที่บัญชี:</span>
+                    <div className="copy-row-interactive">
+                      <strong className="copy-row-acc-digits">{resolvedConfig.accountNumber}</strong>
+                      <button
+                        type="button"
+                        className="btn-copy-chip highlight"
+                        onClick={handleCopyAccount}
+                        title="คัดลอกเลขบัญชี"
+                      >
+                        {copiedAcc ? <Check size={11} /> : <Copy size={11} />}
                         <span>{copiedAcc ? 'คัดลอกแล้ว' : 'คัดลอก'}</span>
                       </button>
                     </div>
                   </div>
-
-                  <div className="bank-row">
-                    <span className="bank-label">ยอดโอนเป๊ะ:</span>
-                    <div className="acc-num-row">
-                      <strong className="bank-amount-digits text-gold">{finalTotal} บาท</strong>
-                      <button
-                        type="button"
-                        className="btn-copy-mini"
-                        onClick={handleCopyAmount}
-                        title="คัดลอกยอดเงิน"
-                      >
-                        {copiedAmount ? <Check size={13} /> : <Copy size={13} />}
-                        <span>{copiedAmount ? 'คัดลอกแล้ว' : 'คัดลอก'}</span>
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Customer Inputs */}
-                <div className="checkout-inputs-group">
-                  <div className="input-field-wrap">
-                    <label className="input-field-lbl">
-                      ชื่อเฟสบุ๊ค หรือชื่อของคุณ <span className="text-rose">*</span>
+              </div>
+
+              {/* COLUMN 2: Customer Inputs & Slip Upload Dropzone */}
+              <div className="checkout-col-form">
+                
+                {/* Customer Details Inputs */}
+                <div className="customer-inputs-panel">
+                  <div className="checkout-field-block">
+                    <label className="checkout-field-label">
+                      <User size={14} className="text-purple" />
+                      <span>ชื่อเฟสบุ๊ค หรือชื่อผู้จอง <strong className="text-rose-400">*</strong></span>
                     </label>
                     <input
                       type="text"
-                      className="checkout-input"
-                      placeholder="เช่น บัง, Tanawat Suksamdao, สมชาย"
+                      className="checkout-input-styled"
+                      placeholder="เช่น สมชาย ใจดี / Filmx Rux"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       required
                     />
+                    <span className="checkout-field-tip">
+                      ระบุชื่อสำหรับบันทึกรายการจองและประกาศรางวัล
+                    </span>
                   </div>
 
-                  <div className="input-field-wrap">
-                    <label className="input-field-lbl">เบอร์โทรศัพท์ / LINE ID (ไม่บังคับ)</label>
+                  <div className="checkout-field-block">
+                    <label className="checkout-field-label">
+                      <Phone size={14} className="text-emerald" />
+                      <span>เบอร์โทรศัพท์ หรือ LINE ID (ไม่บังคับ)</span>
+                    </label>
                     <input
                       type="text"
-                      className="checkout-input"
-                      placeholder="เช่น 081-234-5678 หรือ Line ID"
+                      className="checkout-input-styled"
+                      placeholder="เช่น 081-234-5678 หรือ LINE ID"
                       value={customerContact}
                       onChange={(e) => setCustomerContact(e.target.value)}
                     />
                   </div>
                 </div>
 
-              </div>
-
-            </div>
-
-            {/* Bottom Section: Slip Upload Box */}
-            <div className="slip-upload-section">
-              <label className="slip-upload-lbl">
-                <span>หลักฐานการโอนเงิน (แนบสลิป)</span>
-                <span className="text-rose"> *จำเป็นต้องแนบ</span>
-              </label>
-
-              <div className={`slip-dropzone ${slipPreview ? 'has-slip' : ''}`}>
-                <input
-                  type="file"
-                  id="slip-upload-input"
-                  className="slip-file-input"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                />
-                
-                {slipPreview ? (
-                  <div className="slip-preview-container">
-                    <img src={slipPreview} alt="สลิปการโอนเงิน" className="slip-preview-img" />
-                    <div className="slip-preview-overlay">
-                      <label htmlFor="slip-upload-input" className="btn-change-slip">
-                        <Upload size={14} /> เปลี่ยนรูปสลิป
-                      </label>
+                {/* Slip Upload Area */}
+                <div className="slip-upload-panel">
+                  <div className="slip-panel-header">
+                    <div className="slip-header-title">
+                      <FileImage size={15} className="text-neon-cyan" />
+                      <span>แนบสลิปการโอนเงิน <strong className="text-rose-400">*</strong></span>
                     </div>
+                    {slipPreview && (
+                      <span className="slip-attached-status">
+                        <Check size={12} /> แนบสลิปแล้ว
+                      </span>
+                    )}
                   </div>
-                ) : (
-                  <label htmlFor="slip-upload-input" className="slip-upload-prompt">
-                    <div className="upload-icon-circle">
-                      <Upload size={22} />
+
+                  {/* Hidden Native File Input */}
+                  <input
+                    type="file"
+                    id="slip-file-input-el"
+                    className="slip-hidden-file-input"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+
+                  {/* Drag & Drop / Tap Box */}
+                  {slipPreview ? (
+                    <div className="slip-uploaded-box animate-fade-in">
+                      <div className="slip-preview-img-frame">
+                        <img 
+                          src={slipPreview} 
+                          alt="สลิปโอนเงินที่แนบ" 
+                          className="slip-preview-thumb" 
+                        />
+                      </div>
+                      <div className="slip-uploaded-info">
+                        <span className="slip-success-txt">✓ บันทึกภาพสลิปเรียบร้อย</span>
+                        <span className="slip-sub-tip">พร้อมส่งให้แอดมินตรวจสอบทันที</span>
+                        <label htmlFor="slip-file-input-el" className="btn-reselect-slip">
+                          <RefreshCw size={13} />
+                          <span>เลือกรูปสลิปใหม่</span>
+                        </label>
+                      </div>
                     </div>
-                    <div className="upload-prompt-text">
-                      <strong className="upload-primary-txt">คลิกเพื่ออัปโหลดสลิปการโอนเงิน</strong>
-                      <span className="upload-sub-txt">รองรับภาพถ่ายจากมือถือ หรือภาพบันทึกจากแอปธนาคาร (JPG, PNG)</span>
-                    </div>
-                  </label>
-                )}
+                  ) : (
+                    <label htmlFor="slip-file-input-el" className="slip-dropzone-styled">
+                      <div className="dropzone-icon-circle">
+                        <Upload size={24} />
+                      </div>
+                      <div className="dropzone-text-group">
+                        <strong className="dropzone-main-text">แตะที่นี่เพื่อแนบสลิปโอนเงิน</strong>
+                        <span className="dropzone-sub-text">
+                          รองรับรูปถ่ายจากกล้อง หรือรูปบันทึกจากแอปธนาคาร (JPG, PNG)
+                        </span>
+                      </div>
+                    </label>
+                  )}
+                </div>
+
+                {/* Submit Booking Button */}
+                <button
+                  type="submit"
+                  className="btn-confirm-checkout-order"
+                  disabled={isSubmitting || !customerName.trim() || !slipPreview}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw size={18} className="animate-spin" />
+                      <span>กำลังส่งข้อมูลการจอง...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={19} />
+                      <span>ยืนยันการชำระเงิน & จองเลขทันที ({finalTotal.toLocaleString()} ฿)</span>
+                    </>
+                  )}
+                </button>
+
               </div>
-            </div>
 
-            {/* Footer Action Submit */}
-            <div className="checkout-modal-footer">
-              <button
-                type="button"
-                className="btn-checkout-cancel"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                ยกเลิก
-              </button>
-
-              <button
-                type="submit"
-                className="btn-checkout-submit"
-                disabled={isSubmitting || !customerName.trim() || !slipPreview}
-              >
-                {isSubmitting ? (
-                  <span>กำลังส่งข้อมูล...</span>
-                ) : (
-                  <>
-                    <Check size={18} />
-                    <span>ยืนยันการโอนเงิน & จองเลขทันที</span>
-                  </>
-                )}
-              </button>
             </div>
 
           </form>
         ) : (
-          /* Success Screen */
-          <div className="checkout-success-view animate-fade-in">
-            <div className="success-icon-badge">
+          /* Success Screen View */
+          <div className="checkout-success-container animate-fade-in">
+            <div className="success-badge-circle">
               <CheckCircle2 size={54} className="text-emerald" />
             </div>
-            
-            <h3 className="success-main-heading">ส่งหลักฐานการจองเรียบร้อยแล้ว!</h3>
-            <p className="success-sub-desc">
-              ระบบได้บันทึกการจองเบอร์ <strong>{selectedNumbers.join(', ')}</strong> ({round.title})<br />
-              และแนบสลิปยอด <strong>{finalTotal.toLocaleString()} บาท</strong> ให้แอดมินเรียบร้อยแล้วครับ
+
+            <h3 className="success-heading-title">🎉 บันทึกการจองและแนบสลิปสำเร็จ!</h3>
+            <p className="success-heading-sub">
+              ระบบได้ทำการจองเบอร์และส่งสลิปให้แอดมินเรียบร้อยแล้วครับ ข้อมูลจะอัปเดตลงบนกระดานแบบเรียลไทม์
             </p>
 
-            <div className="success-receipt-card">
-              <div className="receipt-row">
-                <span>ผู้จอง:</span>
-                <strong>{customerName}</strong>
+            {/* Receipt Summary Card */}
+            <div className="receipt-summary-card">
+              <div className="receipt-row-item">
+                <span className="receipt-item-label">กระดาน:</span>
+                <strong className="receipt-item-val text-white">{round.title}</strong>
               </div>
-              <div className="receipt-row">
-                <span>เบอร์ที่จอง:</span>
-                <strong className="text-gold">{selectedNumbers.join(', ')}</strong>
+              <div className="receipt-row-item">
+                <span className="receipt-item-label">ผู้จอง:</span>
+                <strong className="receipt-item-val text-cyan">{customerName}</strong>
               </div>
-              <div className="receipt-row">
-                <span>ยอดเงิน:</span>
-                <strong className="text-emerald">{finalTotal.toLocaleString()} ฿</strong>
+              <div className="receipt-row-item">
+                <span className="receipt-item-label">เบอร์ที่จอง ({selectedNumbers.length} เบอร์):</span>
+                <div className="receipt-num-pills">
+                  {selectedNumbers.map(n => (
+                    <span key={n} className="receipt-num-pill">{n}</span>
+                  ))}
+                </div>
               </div>
-              <div className="receipt-row">
-                <span>สถานะ:</span>
-                <span className="badge-pending-check">⏳ รอแอดมินตรวจสอบสลิป</span>
+              <div className="receipt-row-item highlight-total">
+                <span className="receipt-item-label">ยอดเงินที่ชำระ:</span>
+                <strong className="receipt-item-val text-gold">{finalTotal.toLocaleString()} บาท</strong>
+              </div>
+              <div className="receipt-row-item">
+                <span className="receipt-item-label">สถานะการชำระ:</span>
+                <span className="receipt-status-pending">⏳ แนบสลิปแล้ว (รอแอดมินตรวจสอบ)</span>
               </div>
             </div>
 
             <button
               type="button"
-              className="btn-success-close"
+              className="btn-return-board"
               onClick={onClose}
             >
-              <span>เสร็จสิ้น / กลับสู่หน้ากระดาน</span>
+              <span>กลับสู่หน้ากระดาน</span>
               <ArrowRight size={16} />
             </button>
           </div>
