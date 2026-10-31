@@ -1326,6 +1326,17 @@ export function AdminDashboard({
                               <div className="table-title-wrap">
                                 <div className="title-top-row">
                                   <span className="table-item-title">{board.title}</span>
+                                  {(() => {
+                                    const pendingSlipsCount = (board.bookings || []).filter(b => b.slipImage && b.status !== 'paid').length;
+                                    if (pendingSlipsCount > 0) {
+                                      return (
+                                        <span className="badge-pending-slips-alert" title={`มี ${pendingSlipsCount} สลิปที่รอตรวจสอบในกระดานนี้`}>
+                                          🧾 รอตรวจสลิป ({pendingSlipsCount})
+                                        </span>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
                                   {isSelected && (
                                     <span className="active-selected-tag">
                                       <CheckCircle size={12} />
