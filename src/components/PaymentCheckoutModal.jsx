@@ -75,9 +75,7 @@ export function PaymentCheckoutModal({
   const [slipPreview, setSlipPreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [copiedAcc, setCopiedAcc] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
-  const [copiedName, setCopiedName] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -118,23 +116,10 @@ export function PaymentCheckoutModal({
     }
   };
 
-  const handleCopyAccount = () => {
-    const accNum = resolvedConfig.accountNumber || DEFAULT_PAYMENT_CONFIG.accountNumber;
-    navigator.clipboard.writeText(accNum.replace(/-/g, ''));
-    setCopiedAcc(true);
-    setTimeout(() => setCopiedAcc(false), 2200);
-  };
-
   const handleCopyAmount = () => {
     navigator.clipboard.writeText(String(finalTotal));
     setCopiedAmount(true);
     setTimeout(() => setCopiedAmount(false), 2200);
-  };
-
-  const handleCopyName = () => {
-    navigator.clipboard.writeText(resolvedConfig.accountName);
-    setCopiedName(true);
-    setTimeout(() => setCopiedName(false), 2200);
   };
 
   const handleSubmitPayment = async (e) => {
@@ -293,9 +278,6 @@ export function PaymentCheckoutModal({
                     </div>
                     <div className="qr-bank-tag">
                       <span>{resolvedConfig.bankName}</span>
-                      {resolvedConfig.accountNumber && (
-                        <span> • {resolvedConfig.accountNumber}</span>
-                      )}
                     </div>
                   </div>
 
@@ -311,51 +293,6 @@ export function PaymentCheckoutModal({
                       <Download size={14} />
                       <span>บันทึกรูป QR ลงเครื่อง</span>
                     </a>
-                  </div>
-                </div>
-
-                {/* Account Details Copy Card */}
-                <div className="bank-account-copy-card">
-                  <div className="copy-card-heading">
-                    <CreditCard size={14} className="text-cyan" />
-                    <span>ข้อมูลบัญชีธนาคาร (โอนผ่านเลขบัญชี)</span>
-                  </div>
-
-                  <div className="copy-card-row">
-                    <span className="copy-row-label">ธนาคาร:</span>
-                    <strong className="copy-row-val text-cyan">{resolvedConfig.bankName}</strong>
-                  </div>
-
-                  <div className="copy-card-row">
-                    <span className="copy-row-label">ชื่อบัญชี:</span>
-                    <div className="copy-row-interactive">
-                      <strong className="copy-row-val">{resolvedConfig.accountName}</strong>
-                      <button
-                        type="button"
-                        className="btn-copy-chip"
-                        onClick={handleCopyName}
-                        title="คัดลอกชื่อบัญชี"
-                      >
-                        {copiedName ? <Check size={11} /> : <Copy size={11} />}
-                        <span>{copiedName ? 'คัดลอกแล้ว' : 'คัดลอก'}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="copy-card-row highlight-acc">
-                    <span className="copy-row-label">เลขที่บัญชี:</span>
-                    <div className="copy-row-interactive">
-                      <strong className="copy-row-acc-digits">{resolvedConfig.accountNumber}</strong>
-                      <button
-                        type="button"
-                        className="btn-copy-chip highlight"
-                        onClick={handleCopyAccount}
-                        title="คัดลอกเลขบัญชี"
-                      >
-                        {copiedAcc ? <Check size={11} /> : <Copy size={11} />}
-                        <span>{copiedAcc ? 'คัดลอกแล้ว' : 'คัดลอก'}</span>
-                      </button>
-                    </div>
                   </div>
                 </div>
 
