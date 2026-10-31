@@ -942,7 +942,6 @@ export function AdminDashboard({
           {/* Exit & Logout Buttons */}
           <div className="admin-actions-right">
             {/* Real-time Clock Widget for Admin */}
-            <LiveClock variant="admin" />
 
             {/* Supabase Cloud Connection & Sync Status */}
             {isSupabaseConfigured() ? (
@@ -1812,6 +1811,9 @@ export function AdminDashboard({
                           <h4 className="table-heading-title">
                             รายการผู้จองในกระดานนี้ ({(selectedBoard.bookings || []).length} รายการ)
                           </h4>
+                          <span className="table-scroll-hint-pill" title="สามารถเลื่อนซ้าย-ขวาเพื่อดูข้อมูลในตารางทั้งหมดได้">
+                            👉 เลื่อนซ้าย-ขวา เพื่อดูตารางให้ครบ
+                          </span>
                         </div>
 
                         {(!selectedBoard.bookings || selectedBoard.bookings.length === 0) ? (
@@ -2943,3 +2945,4 @@ export function AdminDashboard({
     </div>
   );
 }
+

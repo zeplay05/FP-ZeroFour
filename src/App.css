@@ -8224,7 +8224,7 @@ body {
    -------------------------------------------------------------------------- */
 .admin-booking-split-grid {
   display: grid;
-  grid-template-columns: 460px 1fr;
+  grid-template-columns: minmax(0, 1.2fr) 400px;
   gap: 24px;
   align-items: start;
   width: 100%;
@@ -8233,7 +8233,7 @@ body {
   box-sizing: border-box;
 }
 
-@media (max-width: 1140px) {
+@media (max-width: 1240px) {
   .admin-booking-split-grid {
     grid-template-columns: 1fr;
   }
@@ -8251,7 +8251,6 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow: hidden;
 }
 
 .admin-visual-grid-box {
@@ -12650,6 +12649,7 @@ html, body {
 }
 
 .live-clock-pill-widget {
+  display: none !important;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -12883,9 +12883,10 @@ html, body {
 /* Board Sales Summary Grid (จำนวนเงินรวมที่ขาย) */
 .board-sales-summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
+  width: 100%;
 }
 
 .sales-stat-card {
@@ -13110,3 +13111,99 @@ html, body {
 
 
 
+
+/* Enhanced Table Horizontal Scroll & Hint */
+.table-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.table-scroll-hint-pill {
+  font-size: 11px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+}
+
+.admin-table-container {
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  -webkit-overflow-scrolling: touch !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  background: rgba(14, 11, 35, 0.7);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  margin-bottom: 12px;
+}
+
+.admin-table-container::-webkit-scrollbar {
+  height: 9px !important;
+  display: block !important;
+}
+
+.admin-table-container::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border-radius: 6px !important;
+}
+
+.admin-table-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #8b5cf6 0%, #06b6d4 100%) !important;
+  border-radius: 6px !important;
+  border: 2px solid rgba(15, 23, 42, 0.6) !important;
+}
+
+.admin-table-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #a855f7 0%, #38bdf8 100%) !important;
+}
+
+.admin-data-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+}
+
+.admin-data-table th,
+.admin-data-table td {
+  padding: 10px 12px !important;
+}
+
+.td-nums {
+  min-width: 120px !important;
+  max-width: 220px !important;
+}
+
+.nums-tags-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 3px !important;
+  align-items: center;
+}
+
+.mini-num-tag {
+  display: inline-block;
+  padding: 2px 6px !important;
+  border-radius: 6px;
+  font-size: 11px !important;
+  line-height: 1.2;
+}
+
+/* Force hide live-clock pill */
+.live-clock-pill-widget,
+.navbar-live-clock,
+.desktop-only-clock,
+.mobile-drawer-clock-box {
+  display: none !important;
+}
