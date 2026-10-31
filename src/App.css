@@ -12630,4 +12630,205 @@ html, body {
   letter-spacing: 0.3px;
 }
 
+/* ==========================================================================
+   REAL-TIME CLOCK & LIVE BOOKING TIMESTAMP STYLES (หน้าบ้าน & หลังบ้าน)
+   ========================================================================== */
+
+@keyframes livePulseGlow {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.live-clock-pill-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font-thai, system-ui);
+  letter-spacing: 0.3px;
+  user-select: none;
+  transition: all 0.25s ease;
+}
+
+.live-clock-pill-widget:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.22);
+}
+
+.live-clock-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: livePulseGlow 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  flex-shrink: 0;
+}
+
+.live-clock-icon {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.live-clock-date-text {
+  color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.live-clock-separator {
+  color: rgba(148, 163, 184, 0.5);
+  font-size: 11px;
+}
+
+.live-clock-time-digits {
+  color: #38bdf8;
+  font-family: 'Outfit', monospace, system-ui;
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  white-space: nowrap;
+}
+
+/* Variant: Navbar (หน้าบ้าน) */
+.live-clock-pill-widget.navbar {
+  margin-right: 8px;
+}
+
+/* Variant: Admin (หลังบ้าน) */
+.live-clock-pill-widget.admin {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(129, 140, 248, 0.4);
+  box-shadow: 0 0 16px rgba(129, 140, 248, 0.15);
+}
+
+.live-clock-pill-widget.admin .live-clock-icon {
+  color: #818cf8;
+}
+
+.live-clock-pill-widget.admin .live-clock-time-digits {
+  color: #a5b4fc;
+  text-shadow: 0 0 10px rgba(129, 140, 248, 0.4);
+}
+
+/* Variant: Compact (Mobile menu) */
+.live-clock-pill-widget.compact {
+  width: 100%;
+  justify-content: center;
+  padding: 8px 14px;
+}
+
+.mobile-drawer-clock-box {
+  padding: 8px 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+
+/* Title row with Real-time indicator */
+.section-box-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-box-title-row .section-box-title {
+  margin-bottom: 0;
+}
+
+.live-realtime-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.live-dot-pulse-mini {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: livePulseGlow 1.6s infinite ease-in-out;
+}
+
+/* History Card Time Text */
+.history-time-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+
+.inline-clock-icon {
+  opacity: 0.75;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+/* Admin Dashboard Table Time Column */
+.td-time {
+  white-space: nowrap;
+}
+
+.admin-booking-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-thai, system-ui);
+}
+
+.admin-booking-time-badge .inline-clock-icon {
+  color: #818cf8;
+}
+
+/* Responsive adjustment for clock */
+@media (max-width: 768px) {
+  .desktop-only-clock {
+    display: none !important;
+  }
+}
+
+
 

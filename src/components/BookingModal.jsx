@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Trash2, User, Phone, FileText, CheckCircle, Clock } from 'lucide-react';
+import { formatBookingTime } from '../utils/timeUtils';
 
 export function BookingModal({
   isOpen,
@@ -38,7 +39,7 @@ export function BookingModal({
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
       note: note.trim(),
-      bookedAt: numberItem.bookedAt || new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+      bookedAt: numberItem.bookedAt || formatBookingTime(Date.now())
     });
     onClose();
   };
@@ -57,7 +58,7 @@ export function BookingModal({
       customerName: customerName.trim() || 'ลูกค้าหน้าร้าน',
       customerPhone: customerPhone.trim(),
       note: note ? `${note} (ชำระแล้ว)` : 'ชำระแล้ว',
-      bookedAt: numberItem.bookedAt || new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+      bookedAt: numberItem.bookedAt || formatBookingTime(Date.now())
     });
     onClose();
   };

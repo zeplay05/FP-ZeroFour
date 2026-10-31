@@ -40,6 +40,8 @@ import {
 } from 'lucide-react';
 import { AdminMusicTab } from './AdminMusicTab';
 import { getBoardTypeInfo, BOARD_TYPES } from '../utils/lotteryData';
+import { LiveClock } from './LiveClock';
+import { formatBookingTime, formatThaiDateTime } from '../utils/timeUtils';
 import { 
   isSupabaseConfigured, 
   syncRoundsWithSupabase, 
@@ -509,13 +511,15 @@ export function AdminDashboard({
     }
 
     const bookingId = `bk-${Date.now()}`;
+    const nowTime = Date.now();
     const newBooking = {
       id: bookingId,
       customerName: fbName,
       facebookName: fbName,
       numbers: validNums,
       status: bookingForm.status, // 'booked' หรือ 'paid'
-      createdAt: Date.now()
+      createdAt: nowTime,
+      timeStr: formatBookingTime(nowTime)
     };
 
     // Update numbers list: mark validNums as booked/paid (ลบล้างออกจากเบอร์ว่างทันที!)
@@ -900,6 +904,9 @@ export function AdminDashboard({
 
           {/* Exit & Logout Buttons */}
           <div className="admin-actions-right">
+            {/* Real-time Clock Widget for Admin */}
+            <LiveClock variant="admin" />
+
             {/* Supabase Cloud Connection & Sync Status */}
             {isSupabaseConfigured() ? (
               <button
@@ -1700,6 +1707,7 @@ export function AdminDashboard({
                                     <th>ชื่อเฟส</th>
                                     <th>เลขที่จอง</th>
                                     <th>ยอดเงิน</th>
+                                    <th>เวลาที่จอง</th>
                                     <th>สถานะ</th>
                                     <th>จัดการ</th>
                                   </tr>
@@ -1717,6 +1725,15 @@ export function AdminDashboard({
                                       </td>
                                       <td className="td-amount">
                                         {(b.numbers.length * (selectedBoard.pricePerNumber || 50)).toLocaleString()} ฿
+                                      </td>
+                                      <td className="td-time">
+                                        <span 
+                                          className="admin-booking-time-badge"
+                                          title={b.createdAt ? `เวลาที่จอง: ${formatThaiDateTime(b.createdAt)}` : ''}
+                                        >
+                                          <Clock size={12} className="inline-clock-icon" />
+                                          <span>{formatBookingTime(b.createdAt || b.timeStr) || '-'}</span>
+                                        </span>
                                       </td>
                                       <td>
                                         {!isCurrentBoardClosed ? (

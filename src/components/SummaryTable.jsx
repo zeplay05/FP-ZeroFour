@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, CheckCircle, Clock, Copy, Phone, User, Check, X, Filter } from 'lucide-react';
+import { formatBookingTime } from '../utils/timeUtils';
 
 export function SummaryTable({
   numbers,
@@ -261,7 +262,7 @@ export function SummaryTable({
                         )}
                       </td>
                       <td className="text-muted text-sm">
-                        {item.bookedAt || '-'}
+                        {formatBookingTime(item.bookedAt || item.createdAt) || '-'}
                       </td>
                       <td className="note-text">
                         {item.note || '-'}

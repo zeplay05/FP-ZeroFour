@@ -8,6 +8,7 @@ import {
   Menu, 
   X
 } from 'lucide-react';
+import { LiveClock } from './LiveClock';
 
 export function AppNavbar({
   viewMode,
@@ -142,8 +143,11 @@ export function AppNavbar({
 
       </nav>
 
-      {/* Right Controls: Mobile Hamburger */}
+      {/* Right Controls: Real-time Live Clock & Mobile Hamburger */}
       <div className="navbar-v2-right">
+        {/* Real-time Clock on Desktop & Tablet */}
+        <LiveClock variant="navbar" className="desktop-only-clock" />
+
         {/* Mobile Hamburger Button */}
         <button
           type="button"
@@ -158,6 +162,9 @@ export function AppNavbar({
       {/* Mobile Drawer Dropdown Menu */}
       {isMobileMenuOpen && (
         <div className="navbar-mobile-drawer animate-fade-in">
+          <div className="mobile-drawer-clock-box">
+            <LiveClock variant="compact" />
+          </div>
           <button
             type="button"
             className={`mobile-nav-item ${isHomeActive ? 'active' : ''}`}

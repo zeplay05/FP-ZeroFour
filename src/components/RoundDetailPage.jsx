@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ChevronDown, 
   Download, 
@@ -7,9 +7,11 @@ import {
   X, 
   Search, 
   MessageCircle,
-  FileText
+  FileText,
+  Clock
 } from 'lucide-react';
 import { formatThaiDate, getBoardTypeInfo } from '../utils/lotteryData';
+import { formatBookingTime, formatThaiDateTime } from '../utils/timeUtils';
 import { SelectRemainingNumbersModal } from './SelectRemainingNumbersModal';
 
 export function RoundDetailPage({
@@ -20,6 +22,13 @@ export function RoundDetailPage({
 }) {
   const [historySearch, setHistorySearch] = useState('');
   const [isRemainingModalOpen, setIsRemainingModalOpen] = useState(false);
+  const [, setTick] = useState(0);
+
+  // Periodic tick for live relative time re-rendering
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   const bookings = round.bookings || [];
   const numbers = round.numbers || [];
@@ -247,9 +256,14 @@ export function RoundDetailPage({
 
           {/* Box 2: ประวัติการจอง (Booking History List, Newest First) */}
           <div className="booking-history-box">
-            <h3 className="section-box-title">
-              ประวัติการจอง ({bookings.length})
-            </h3>
+            <div className="section-box-title-row">
+              <h3 className="section-box-title">
+                ประวัติการจอง ({bookings.length})
+              </h3>
+              <span className="live-realtime-indicator" title="ข้อมูลประวัติการจองอัปเดต Real-time">
+                <span className="live-dot-pulse-mini" /> Real-time
+              </span>
+            </div>
 
             {/* Search filter for history */}
             <div className="history-search-wrap">
@@ -272,6 +286,7 @@ export function RoundDetailPage({
                 filteredBookings.map((b) => {
                   const isPaid = b.status === 'paid';
                   const numsFormatted = Array.isArray(b.numbers) ? b.numbers.join('-') : b.numbers;
+                  const displayTime = formatBookingTime(b.createdAt || b.timeStr);
 
                   return (
                     <div key={b.id} className="history-item-card">
@@ -295,8 +310,12 @@ export function RoundDetailPage({
                         </div>
 
                         <div className="history-right-meta">
-                          <span className="history-time-text">
-                            {b.timeStr || '25 ต.ค. 10:46'}
+                          <span 
+                            className="history-time-text"
+                            title={b.createdAt ? `เวลาที่จอง: ${formatThaiDateTime(b.createdAt)}` : ''}
+                          >
+                            <Clock size={11} className="inline-clock-icon" />
+                            {displayTime}
                           </span>
                         </div>
                       </div>
