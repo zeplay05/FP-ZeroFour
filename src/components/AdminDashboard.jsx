@@ -1847,19 +1847,12 @@ export function AdminDashboard({
                                         const priceInfo = calculateBookingPrice(b, selectedBoard);
                                         return (
                                           <td className="td-amount">
-                                            <div className="amount-cell-wrap">
-                                              <span className="final-price-bold">
-                                                {priceInfo.finalPrice.toLocaleString()} ฿
-                                              </span>
-                                              {priceInfo.discount > 0 && (
-                                                <span 
-                                                  className="discount-pill-badge" 
-                                                  title={`ราคาปกติ ${priceInfo.rawPrice.toLocaleString()} ฿ (ลด ${priceInfo.discount} ฿ ตามโปรโมชั่น)`}
-                                                >
-                                                  ลด {priceInfo.discount}.-
-                                                </span>
-                                              )}
-                                            </div>
+                                            <span 
+                                              className="final-price-bold"
+                                              title={priceInfo.discount > 0 ? `ราคาปกติ ${priceInfo.rawPrice.toLocaleString()} ฿ (ลดแล้ว ${priceInfo.discount} ฿)` : undefined}
+                                            >
+                                              {priceInfo.finalPrice.toLocaleString()} ฿
+                                            </span>
                                           </td>
                                         );
                                       })()}
