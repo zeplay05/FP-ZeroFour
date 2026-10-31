@@ -8,7 +8,8 @@ import {
   Sparkles, 
   RefreshCw,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  Edit2
 } from 'lucide-react';
 import { 
   loadMusicSettings, 
@@ -17,6 +18,10 @@ import {
   DEFAULT_MUSIC_SETTINGS,
   fetchMusicMetadata
 } from '../utils/musicData';
+import { 
+  fetchSettingFromSupabase, 
+  saveSettingToSupabase 
+} from '../utils/supabaseClient';
 
 export function AdminMusicTab() {
   const [settings, setSettings] = useState(loadMusicSettings);
@@ -24,6 +29,8 @@ export function AdminMusicTab() {
   // Get currently active song or first song
   const initialTrack = settings.track || settings.playlist?.[0] || DEFAULT_MUSIC_SETTINGS.playlist[0];
   const [songUrl, setSongUrl] = useState(initialTrack.url || '');
+  const [songTitle, setSongTitle] = useState(initialTrack.title || '');
+  const [songArtist, setSongArtist] = useState(initialTrack.artist || '');
   const [detectedMeta, setDetectedMeta] = useState({
     title: initialTrack.title,
     artist: initialTrack.artist,
@@ -31,12 +38,44 @@ export function AdminMusicTab() {
     thumbnail: initialTrack.thumbnail
   });
   const [isFetchingMeta, setIsFetchingMeta] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const debounceTimeoutRef = useRef(null);
 
   // Auto-detect source for the current URL input
   const detectedSource = detectSourceType(songUrl);
+
+  // Load from Supabase on Mount to get fresh cloud settings
+  useEffect(() => {
+    let isMounted = true;
+    fetchSettingFromSupabase('music_settings')
+      .then(cloudData => {
+        if (cloudData && isMounted) {
+          try {
+            const parsed = typeof cloudData === 'string' ? JSON.parse(cloudData) : cloudData;
+            setSettings(parsed);
+            const tr = parsed.track || parsed.playlist?.[0];
+            if (tr) {
+              setSongUrl(tr.url || '');
+              setSongTitle(tr.title || '');
+              setSongArtist(tr.artist || '');
+              setDetectedMeta({
+                title: tr.title,
+                artist: tr.artist,
+                source: tr.source,
+                thumbnail: tr.thumbnail
+              });
+            }
+          } catch (e) {
+            console.error('Error parsing cloud music data:', e);
+          }
+        }
+      })
+      .catch(() => {});
+
+    return () => { isMounted = false; };
+  }, []);
 
   // Handle URL change (Auto-Fetch Title & Artist)
   const handleUrlChange = (url) => {
@@ -47,7 +86,7 @@ export function AdminMusicTab() {
     }
 
     const clean = url.trim();
-    if (!clean || clean.length < 10) {
+    if (!clean || clean.length < 5) {
       setIsFetchingMeta(false);
       return;
     }
@@ -58,6 +97,8 @@ export function AdminMusicTab() {
         const meta = await fetchMusicMetadata(clean);
         if (meta) {
           setDetectedMeta(meta);
+          if (meta.title) setSongTitle(meta.title);
+          if (meta.artist) setSongArtist(meta.artist);
         }
       } catch (err) {
         console.warn('Auto fetch metadata failed', err);
@@ -82,6 +123,8 @@ export function AdminMusicTab() {
   const handleLoadPreset = () => {
     const preset = DEFAULT_MUSIC_SETTINGS.playlist[0];
     setSongUrl(preset.url);
+    setSongTitle(preset.title);
+    setSongArtist(preset.artist);
     setDetectedMeta({
       title: preset.title,
       artist: preset.artist,
@@ -90,45 +133,56 @@ export function AdminMusicTab() {
     });
   };
 
-  // Save Settings to Storage (Only single button at the bottom)
+  // Save Settings to Storage & Supabase Cloud
   const handleSaveAll = async () => {
     const cleanUrl = songUrl.trim();
     let finalMeta = detectedMeta;
 
-    if (cleanUrl && (!finalMeta || isFetchingMeta)) {
-      finalMeta = await fetchMusicMetadata(cleanUrl);
-    }
+    setIsSaving(true);
+    try {
+      if (cleanUrl && (!finalMeta || isFetchingMeta)) {
+        finalMeta = await fetchMusicMetadata(cleanUrl);
+      }
 
-    const singleTrack = {
-      id: `track-${Date.now()}`,
-      title: finalMeta?.title || (detectedSource === 'youtube' ? 'YouTube Music Track' : 'Audio Track'),
-      artist: finalMeta?.artist || 'FP TCG',
-      source: finalMeta?.source || detectedSource,
-      url: cleanUrl || initialTrack.url,
-      thumbnail: finalMeta?.thumbnail || ''
-    };
+      const singleTrack = {
+        id: `track-${Date.now()}`,
+        title: songTitle.trim() || finalMeta?.title || (detectedSource === 'youtube' ? 'YouTube Music Track' : 'Audio Track'),
+        artist: songArtist.trim() || finalMeta?.artist || 'FP TCG',
+        source: finalMeta?.source || detectedSource,
+        url: cleanUrl || initialTrack.url,
+        thumbnail: finalMeta?.thumbnail || ''
+      };
 
-    const updatedSettings = {
-      ...settings,
-      enabled: true,
-      autoplay: true,
-      activeTrackId: singleTrack.id,
-      track: singleTrack,
-      playlist: [singleTrack]
-    };
+      const updatedSettings = {
+        ...settings,
+        enabled: settings.enabled ?? true,
+        autoplay: true,
+        activeTrackId: singleTrack.id,
+        track: singleTrack,
+        playlist: [singleTrack]
+      };
 
-    const ok = saveMusicSettings(updatedSettings);
-    if (ok) {
+      // 1. Save to local storage & trigger local event
+      saveMusicSettings(updatedSettings);
+
+      // 2. Save to Supabase Cloud Database!
+      await saveSettingToSupabase('music_settings', JSON.stringify(updatedSettings));
+
       setSettings(updatedSettings);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to save music settings:', err);
+      alert('เกิดข้อผิดพลาดในการบันทึกเพลง: ' + err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <div className="admin-music-tab-container">
+    <div className="admin-music-tab-container animate-fade-in">
       
-      {/* Tab Header (No top save button) */}
+      {/* Tab Header */}
       <div className="admin-section-header-row">
         <div>
           <h2 className="admin-section-main-title">
@@ -136,7 +190,7 @@ export function AdminMusicTab() {
             <span>จัดการเพลงพื้นหลังหน้าเว็บ (Background Music)</span>
           </h2>
           <p className="admin-section-sub-desc">
-            กำหนดเพลงที่จะให้ลูกค้าฟังขณะเข้าใช้งานเว็บไซต์ รองรับลิงก์จาก <strong>YouTube</strong>, <strong>Spotify</strong> และ <strong>ไฟล์เสียง MP3</strong>
+            กำหนดเพลงที่จะให้ลูกค้าฟังขณะเข้าใช้งานเว็บไซต์ รองรับลิงก์จาก <strong>YouTube</strong>, <strong>Spotify</strong> และ <strong>ไฟล์เสียง MP3</strong> ซิงค์ลง Cloud ทันที
           </p>
         </div>
       </div>
@@ -161,22 +215,22 @@ export function AdminMusicTab() {
               className={`toggle-switch-btn ${settings.enabled ? 'active' : ''}`}
               onClick={handleToggleEnabled}
             >
-              <span className="toggle-switch-slider" />
+              <span className="toggle-slider" />
             </button>
-            <span className="toggle-label-text">
-              {settings.enabled ? 'เปิดใช้งาน (Active)' : 'ปิดใช้งาน (Disabled)'}
+            <span className="toggle-state-text">
+              {settings.enabled ? 'เปิดเล่นเพลง' : 'ปิดเพลง'}
             </span>
           </div>
         </div>
 
-        {/* Config Card 2: Default Volume */}
+        {/* Config Card 2: Volume Slider */}
         <div className="music-config-card">
           <div className="config-card-header">
             <span className="config-card-icon-wrap">
               <Volume2 size={18} />
             </span>
             <div>
-              <h4 className="config-card-title">ระดับเสียงเริ่มต้น ({settings.defaultVolume}%)</h4>
+              <h4 className="config-card-title">ระดับเสียงเริ่มต้น</h4>
               <p className="config-card-desc">ความดังเสียงของเพลงเมื่อผู้ใช้กดเปิดฟัง</p>
             </div>
           </div>
@@ -185,17 +239,17 @@ export function AdminMusicTab() {
               type="range"
               min="5"
               max="100"
-              value={settings.defaultVolume}
+              value={settings.defaultVolume || 50}
               onChange={handleVolumeChange}
               className="admin-volume-slider"
             />
-            <span className="volume-display-badge">{settings.defaultVolume}%</span>
+            <span className="volume-display-badge">{settings.defaultVolume || 50}%</span>
           </div>
         </div>
 
       </div>
 
-      {/* Background Music Song Configuration Card (Single Song with Auto-detected Title & Artist) */}
+      {/* Background Music Song Configuration Card */}
       <div className="admin-music-add-card">
         <div className="add-card-header-bar">
           <h3 className="add-card-heading">
@@ -241,21 +295,49 @@ export function AdminMusicTab() {
             </p>
           </div>
 
-          {/* Auto-detected metadata card */}
+          {/* Editable Title & Artist Fields */}
+          <div className="music-details-fields-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '10px' }}>
+            <div className="input-field-group">
+              <label className="field-label">
+                <span>ชื่อเพลง (Song Title)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="ระบุชื่อเพลง"
+                value={songTitle}
+                onChange={(e) => setSongTitle(e.target.value)}
+                className="admin-music-input"
+              />
+            </div>
+            <div className="input-field-group">
+              <label className="field-label">
+                <span>ศิลปิน / ช่อง (Artist)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="ระบุชื่อศิลปิน"
+                value={songArtist}
+                onChange={(e) => setSongArtist(e.target.value)}
+                className="admin-music-input"
+              />
+            </div>
+          </div>
+
+          {/* Auto-detected metadata card preview */}
           {detectedMeta && (
-            <div className="meta-auto-detected-card animate-fade-in">
+            <div className="meta-auto-detected-card animate-fade-in" style={{ marginTop: '12px' }}>
               <div className="meta-auto-badge">
                 <Check size={14} />
                 <span>ดึงข้อมูลเพลงอัตโนมัติสำเร็จ</span>
               </div>
               <div className="meta-auto-content-grid">
                 <div className="meta-data-box">
-                  <span className="meta-lbl">ชื่อเพลง (Auto Title):</span>
-                  <strong className="meta-val highlight-purple">{detectedMeta.title}</strong>
+                  <span className="meta-lbl">ชื่อเพลง:</span>
+                  <strong className="meta-val highlight-purple">{songTitle || detectedMeta.title}</strong>
                 </div>
                 <div className="meta-data-box">
-                  <span className="meta-lbl">ศิลปิน / ช่อง (Auto Artist):</span>
-                  <span className="meta-val">{detectedMeta.artist}</span>
+                  <span className="meta-lbl">ศิลปิน / ช่อง:</span>
+                  <span className="meta-val">{songArtist || detectedMeta.artist}</span>
                 </div>
               </div>
 
@@ -276,28 +358,30 @@ export function AdminMusicTab() {
             </div>
           )}
 
-          <div className="form-submit-row">
-           
-          </div>
-
         </div>
       </div>
 
-      {/* Only Save Button Float Footer Bar (Single Save Button at the Bottom) */}
+      {/* Save Button Float Footer Bar */}
       <div className="admin-save-footer-bar">
         <div className="save-footer-info">
           <AlertCircle size={16} />
-          <span>เมื่อเปลี่ยนลิงก์เพลงแล้ว อย่าลืมกด <strong>"บันทึกการตั้งค่าเพลง"</strong> เพื่อให้ระบบอัปเดตไปยังหน้าแรกทันทีครับ</span>
+          <span>เมื่อเปลี่ยนลิงก์เพลงแล้ว กด <strong>"บันทึกการตั้งค่าเพลง"</strong> ข้อมูลจะซิงค์ขึ้น Supabase Cloud ทันทีครับ</span>
         </div>
         <button
           type="button"
           className={`btn-admin-save-music ${saveSuccess ? 'success' : ''}`}
           onClick={handleSaveAll}
+          disabled={isSaving}
         >
-          {saveSuccess ? (
+          {isSaving ? (
+            <>
+              <RefreshCw size={18} className="animate-spin" />
+              <span>กำลังบันทึกและซิงค์ Cloud...</span>
+            </>
+          ) : saveSuccess ? (
             <>
               <Check size={18} />
-              <span>บันทึกสำเร็จแล้ว!</span>
+              <span>บันทึกและซิงค์ Cloud สำเร็จ!</span>
             </>
           ) : (
             <>

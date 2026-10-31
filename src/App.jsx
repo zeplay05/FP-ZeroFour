@@ -27,6 +27,7 @@ import {
   deleteRoundFromSupabase
 } from './utils/supabaseClient';
 import { DEFAULT_PAYMENT_CONFIG } from './utils/promptpay';
+import { saveMusicSettings } from './utils/musicData';
 import confetti from 'canvas-confetti';
 import './App.css';
 
@@ -198,11 +199,12 @@ function App() {
     let isMounted = true;
     async function loadCloudData() {
       try {
-        const [cloudRounds, cloudCards, cloudFbLink, cloudPaymentSettings] = await Promise.all([
+        const [cloudRounds, cloudCards, cloudFbLink, cloudPaymentSettings, cloudMusicSettings] = await Promise.all([
           fetchRoundsFromSupabase(),
           fetchStoreCardsFromSupabase(),
           fetchSettingFromSupabase('seller_fb_link'),
-          fetchSettingFromSupabase('payment_settings')
+          fetchSettingFromSupabase('payment_settings'),
+          fetchSettingFromSupabase('music_settings')
         ]);
 
         if (isMounted) {
@@ -235,6 +237,15 @@ function App() {
               localStorage.setItem('fp_payment_config', JSON.stringify(parsed));
             } catch (e) {
               console.error('[Supabase] Error parsing payment settings:', e);
+            }
+          }
+
+          if (cloudMusicSettings) {
+            try {
+              const parsed = typeof cloudMusicSettings === 'string' ? JSON.parse(cloudMusicSettings) : cloudMusicSettings;
+              saveMusicSettings(parsed);
+            } catch (e) {
+              console.error('[Supabase] Error parsing music settings:', e);
             }
           }
         }

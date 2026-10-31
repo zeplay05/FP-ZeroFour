@@ -144,6 +144,10 @@ export function FloatingMusicPlayer() {
   const ytId = currentTrack?.source === 'youtube' ? extractYouTubeId(currentTrack?.url) : '';
 
   useEffect(() => {
+    ytPlayerRef.current = null;
+  }, [ytId]);
+
+  useEffect(() => {
     if (!ytId || currentTrack?.source !== 'youtube') return;
 
     let pollTimer = null;

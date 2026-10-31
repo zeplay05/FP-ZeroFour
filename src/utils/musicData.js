@@ -1,3 +1,5 @@
+import { saveSettingToSupabase } from './supabaseClient';
+
 // =========================================================================
 // FP ZEROFOUR BACKGROUND MUSIC DATA & HELPER UTILITIES
 // Supports YouTube, Spotify, and Direct Audio (MP3/Stream)
@@ -65,6 +67,11 @@ export function extractYouTubeId(url = '') {
     if (v && v.length === 11) return v;
   } catch {}
 
+  // Support direct 11-character video ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) {
+    return clean;
+  }
+
   return '';
 }
 
@@ -103,11 +110,10 @@ export function loadMusicSettings() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // If parsed contains old Lofi Girl track, purge it completely
+      // Only purge if specifically referencing obsolete broken demo track jfKfPfyJRdk
       if (
         parsed.track?.url?.includes('jfKfPfyJRdk') ||
-        parsed.playlist?.some(t => t.url?.includes('jfKfPfyJRdk')) ||
-        parsed.track?.title?.toLowerCase().includes('lofi')
+        parsed.playlist?.some(t => t.url?.includes('jfKfPfyJRdk'))
       ) {
         localStorage.removeItem(STORAGE_KEY);
         return DEFAULT_MUSIC_SETTINGS;
@@ -137,6 +143,12 @@ export function saveMusicSettings(settings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     window.dispatchEvent(new CustomEvent('fp_music_settings_updated', { detail: settings }));
+    // Cloud sync to Supabase Database
+    try {
+      saveSettingToSupabase('music_settings', JSON.stringify(settings)).catch(err => {
+        console.warn('[Supabase] Failed to sync music settings to cloud', err);
+      });
+    } catch {}
     return true;
   } catch (err) {
     console.error('Failed to save music settings', err);
