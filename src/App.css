@@ -5808,6 +5808,7 @@ body {
   border-top: 1px solid rgba(139, 92, 246, 0.2);
   display: flex;
   flex-direction: column;
+  text-align: center;
 }
 
 .board-card-title {
@@ -12591,6 +12592,7 @@ html, body {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  text-align: center;
 }
 
 /* 5. Winning Announcement Showcase Card (รางวัลที่ออก & ดีใจกับพี่...) */
