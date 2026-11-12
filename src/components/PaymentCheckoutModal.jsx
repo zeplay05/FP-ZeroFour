@@ -75,6 +75,7 @@ export function PaymentCheckoutModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
+  const [submittedDetails, setSubmittedDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export function PaymentCheckoutModal({
       setSlipPreview(null);
       setIsSubmitting(false);
       setIsSuccess(false);
+      setSubmittedDetails(null);
       setErrorMessage('');
     }
   }, [isOpen, initialName]);
@@ -136,11 +138,20 @@ export function PaymentCheckoutModal({
       setIsSubmitting(true);
       setErrorMessage('');
 
+      // Snapshot order details for the receipt view
+      const orderSnapshot = {
+        numbers: [...selectedNumbers],
+        finalPrice: finalTotal,
+        customerName: customerName.trim(),
+        roundTitle: round.title
+      };
+      setSubmittedDetails(orderSnapshot);
+
       const bookingData = {
         customerName: customerName.trim(),
         facebookName: customerName.trim(),
         customerContact: customerContact.trim(),
-        numbers: selectedNumbers,
+        numbers: [...selectedNumbers],
         note: note.trim(),
         status: 'booked',
         paymentStatus: 'pending_verification',
@@ -416,32 +427,41 @@ export function PaymentCheckoutModal({
             </p>
 
             {/* Receipt Summary Card */}
-            <div className="receipt-summary-card">
-              <div className="receipt-row-item">
-                <span className="receipt-item-label">กระดาน:</span>
-                <strong className="receipt-item-val text-white">{round.title}</strong>
-              </div>
-              <div className="receipt-row-item">
-                <span className="receipt-item-label">ผู้จอง:</span>
-                <strong className="receipt-item-val text-cyan">{customerName}</strong>
-              </div>
-              <div className="receipt-row-item">
-                <span className="receipt-item-label">เบอร์ที่จอง ({selectedNumbers.length} เบอร์):</span>
-                <div className="receipt-num-pills">
-                  {selectedNumbers.map(n => (
-                    <span key={n} className="receipt-num-pill">{n}</span>
-                  ))}
+            {(() => {
+              const displayNumbers = (submittedDetails?.numbers && submittedDetails.numbers.length > 0) ? submittedDetails.numbers : selectedNumbers;
+              const displayAmount = submittedDetails?.finalPrice ?? finalTotal;
+              const displayCustomer = submittedDetails?.customerName || customerName;
+              const displayTitle = submittedDetails?.roundTitle || round.title;
+
+              return (
+                <div className="receipt-summary-card">
+                  <div className="receipt-row-item">
+                    <span className="receipt-item-label">กระดาน:</span>
+                    <strong className="receipt-item-val text-white">{displayTitle}</strong>
+                  </div>
+                  <div className="receipt-row-item">
+                    <span className="receipt-item-label">ผู้จอง:</span>
+                    <strong className="receipt-item-val text-cyan">{displayCustomer}</strong>
+                  </div>
+                  <div className="receipt-row-item">
+                    <span className="receipt-item-label">เบอร์ที่จอง ({displayNumbers.length} เบอร์):</span>
+                    <div className="receipt-num-pills">
+                      {displayNumbers.map(n => (
+                        <span key={n} className="receipt-num-pill">{n}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="receipt-row-item highlight-total">
+                    <span className="receipt-item-label">ยอดเงินที่ชำระ:</span>
+                    <strong className="receipt-item-val text-gold">{displayAmount.toLocaleString()} บาท</strong>
+                  </div>
+                  <div className="receipt-row-item">
+                    <span className="receipt-item-label">สถานะการชำระ:</span>
+                    <span className="receipt-status-pending">⏳ แนบสลิปแล้ว (รอแอดมินตรวจสอบ)</span>
+                  </div>
                 </div>
-              </div>
-              <div className="receipt-row-item highlight-total">
-                <span className="receipt-item-label">ยอดเงินที่ชำระ:</span>
-                <strong className="receipt-item-val text-gold">{finalTotal.toLocaleString()} บาท</strong>
-              </div>
-              <div className="receipt-row-item">
-                <span className="receipt-item-label">สถานะการชำระ:</span>
-                <span className="receipt-status-pending">⏳ แนบสลิปแล้ว (รอแอดมินตรวจสอบ)</span>
-              </div>
-            </div>
+              );
+            })()}
 
             <button
               type="button"

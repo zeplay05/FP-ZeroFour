@@ -220,8 +220,6 @@ export function SelectRemainingNumbersModal({
     if (onUpdateRoundBookings) {
       await onUpdateRoundBookings(round.id, updatedNumbers, updatedBookings);
     }
-
-    setSelectedNumbers([]);
   };
 
   return (
@@ -544,7 +542,11 @@ export function SelectRemainingNumbersModal({
       {/* Payment & PromptPay Checkout Modal */}
       <PaymentCheckoutModal
         isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
+        onClose={() => {
+          setIsCheckoutOpen(false);
+          setSelectedNumbers([]);
+          if (onClose) onClose();
+        }}
         round={round}
         selectedNumbers={selectedNumbers}
         customerName={customerName}
