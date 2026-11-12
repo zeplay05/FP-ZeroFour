@@ -403,7 +403,7 @@ export function SelectRemainingNumbersModal({
             </div>
           </div>
 
-          {/* Action Buttons: ส่งเข้าแชทเฟส (Messenger) แบบเดิม + ชำระเงิน & แนบสลิปผ่านเว็บ */}
+          {/* Action Buttons: ส่งแชทเฟส + ชำระเงินผ่านเว็บ */}
           <div className="select-actions-row">
             <button
               type="button"
@@ -411,9 +411,9 @@ export function SelectRemainingNumbersModal({
               onClick={handleOpenMessenger}
               disabled={selectedNumbers.length === 0}
             >
-              <MessageCircle size={19} />
-              <span>ส่งเข้าแชทเฟส (Messenger) {count > 0 ? `(${count} เบอร์)` : ''}</span>
-              <ExternalLink size={15} className="send-ext-icon" />
+              <MessageCircle size={18} />
+              <span>ส่งแชทเฟส</span>
+              <ExternalLink size={14} className="send-ext-icon" />
             </button>
 
             <button
@@ -428,8 +428,8 @@ export function SelectRemainingNumbersModal({
               }}
               disabled={selectedNumbers.length === 0}
             >
-              <CreditCard size={19} />
-              <span>💳 ชำระเงิน & แนบสลิปผ่านเว็บ</span>
+              <CreditCard size={18} />
+              <span>ชำระเงินผ่านเว็บ</span>
             </button>
           </div>
 
