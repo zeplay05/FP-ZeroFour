@@ -131,8 +131,8 @@ export function SlipViewerModal({
             </div>
 
             {/* Admin Action Buttons */}
-            <div className="slip-actions-footer">
-              {!isPaid && onApprovePaid && (
+            {!isPaid && onApprovePaid && (
+              <div className="slip-actions-footer">
                 <button
                   type="button"
                   className="btn-approve-slip"
@@ -144,16 +144,8 @@ export function SlipViewerModal({
                   <CheckCircle2 size={16} />
                   <span>✅ อนุมัติสลิป (เปลี่ยนเป็นจ่ายแล้ว)</span>
                 </button>
-              )}
-
-              <button
-                type="button"
-                className="btn-close-viewer"
-                onClick={onClose}
-              >
-                <span>ปิดหน้าต่าง</span>
-              </button>
-            </div>
+              </div>
+            )}
 
           </div>
         </div>

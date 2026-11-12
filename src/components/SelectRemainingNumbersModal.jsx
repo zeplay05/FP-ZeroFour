@@ -353,7 +353,7 @@ export function SelectRemainingNumbersModal({
           <div className="customer-input-group full-width">
             <input 
               type="text" 
-              placeholder="ชื่อเฟสของคุณ (ระบุเพื่อแจ้งผู้ขาย หรือเว้นว่างได้)"
+              placeholder="ระบุชื่อเฟสจริงๆ (จะได้ตามได้ง่ายถ้าถูกรางวัล)"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               className="customer-fb-input"

@@ -126,7 +126,7 @@ export function PaymentCheckoutModal({
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     if (!customerName.trim()) {
-      setErrorMessage('กรุณาระบุชื่อเฟสบุ๊ค หรือชื่อผู้จองของคุณครับ');
+      setErrorMessage('กรุณาระบุชื่อเฟสบุ๊คจริงของคุณ (จะได้ตามได้ง่ายถ้าถูกรางวัล)');
       return;
     }
     if (!slipPreview) {
@@ -321,13 +321,13 @@ export function PaymentCheckoutModal({
                     <input
                       type="text"
                       className="checkout-input-styled"
-                      placeholder="เช่น สมชาย ใจดี / Filmx Rux"
+                      placeholder="ระบุชื่อเฟสจริง เช่น สมชาย ใจดี / Filmx Rux"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       required
                     />
                     <span className="checkout-field-tip">
-                      ระบุชื่อสำหรับบันทึกรายการจองและประกาศรางวัล
+                      ระบุชื่อเฟสจริงๆ จะได้ตามได้ง่ายถ้าถูกรางวัล
                     </span>
                   </div>
                 </div>

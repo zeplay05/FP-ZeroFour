@@ -14392,19 +14392,28 @@ html, body {
   gap: 10px;
 }
 
+.slip-actions-footer {
+  margin-top: 6px;
+  display: flex;
+  width: 100%;
+}
+
 .btn-approve-slip {
+  width: 100%;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   background: linear-gradient(135deg, #059669 0%, #10b981 100%);
   color: #ffffff;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-radius: 10px;
   border: none;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+  transition: all 0.2s ease;
 }
 
 .btn-approve-slip:hover {
