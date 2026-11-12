@@ -34,6 +34,11 @@ export function AdminBordersTab({
   onUpdateShipping,
   onUpdateOrders
 }) {
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const safeBorders = Array.isArray(borders) ? borders : [];
+  const safeMaterials = Array.isArray(materials) ? materials : [];
+  const safeShipping = shippingConfig || { fee: 80, freeThreshold: 10 };
+
   const [activeSubTab, setActiveSubTab] = useState('orders'); // 'orders' | 'products' | 'materials'
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
@@ -52,35 +57,35 @@ export function AdminBordersTab({
   });
 
   // Materials Form State
-  const [editingMaterials, setEditingMaterials] = useState(materials);
-  const [editingShipping, setEditingShipping] = useState(shippingConfig);
+  const [editingMaterials, setEditingMaterials] = useState(safeMaterials);
+  const [editingShipping, setEditingShipping] = useState(safeShipping);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
 
   // 1. STATS CALCULATIONS
   const totalRevenue = useMemo(() => {
-    return orders.reduce((acc, o) => acc + (o.finalTotal || 0), 0);
-  }, [orders]);
+    return safeOrders.reduce((acc, o) => acc + (o.finalTotal || 0), 0);
+  }, [safeOrders]);
 
   const paidRevenue = useMemo(() => {
-    return orders
+    return safeOrders
       .filter(o => o.status === 'paid' || o.status === 'shipped')
       .reduce((acc, o) => acc + (o.finalTotal || 0), 0);
-  }, [orders]);
+  }, [safeOrders]);
 
   const pendingRevenue = useMemo(() => {
-    return orders
+    return safeOrders
       .filter(o => o.status === 'pending_verification')
       .reduce((acc, o) => acc + (o.finalTotal || 0), 0);
-  }, [orders]);
+  }, [safeOrders]);
 
   const pendingOrdersCount = useMemo(() => {
-    return orders.filter(o => o.status === 'pending_verification').length;
-  }, [orders]);
+    return safeOrders.filter(o => o.status === 'pending_verification').length;
+  }, [safeOrders]);
 
   // 2. BEST SELLERS SUMMARY ("สรุปตัวไหนขายดี")
   const bestSellers = useMemo(() => {
     const map = {};
-    orders.forEach(order => {
+    safeOrders.forEach(order => {
       (order.items || []).forEach(it => {
         const id = it.borderId || it.code || it.name;
         if (!map[id]) {
@@ -101,11 +106,11 @@ export function AdminBordersTab({
     });
 
     return Object.values(map).sort((a, b) => b.soldCount - a.soldCount);
-  }, [orders]);
+  }, [safeOrders]);
 
   // 3. FILTERED ORDERS
   const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
+    return safeOrders.filter(o => {
       const q = orderSearchQuery.trim().toLowerCase();
       const matchSearch = !q ||
         o.orderCode?.toLowerCase().includes(q) ||
@@ -116,7 +121,7 @@ export function AdminBordersTab({
       const matchStatus = orderStatusFilter === 'ALL' || o.status === orderStatusFilter;
       return matchSearch && matchStatus;
     });
-  }, [orders, orderSearchQuery, orderStatusFilter]);
+  }, [safeOrders, orderSearchQuery, orderStatusFilter]);
 
   // ORDER ACTIONS
   const handleApproveSlip = (orderId) => {
@@ -882,3 +887,4 @@ export function AdminBordersTab({
 }
 
 export default AdminBordersTab;
+

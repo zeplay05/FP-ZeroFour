@@ -37,7 +37,8 @@ import {
   Upload,
   Database,
   FileText,
-  Coins
+  Coins,
+  ShoppingBag
 } from 'lucide-react';
 import { AdminMusicTab } from './AdminMusicTab';
 import { AdminBordersTab } from './AdminBordersTab';
@@ -1066,9 +1067,9 @@ export function AdminDashboard({
           >
             <ShoppingBag size={17} />
             <span>2. ขอบการ์ด & ออเดอร์</span>
-            {orders.filter(o => o.status === 'pending_verification').length > 0 && (
+            {(orders || []).filter(o => o.status === 'pending_verification').length > 0 && (
               <span className="admin-nav-pulse-badge">
-                {orders.filter(o => o.status === 'pending_verification').length}
+                {(orders || []).filter(o => o.status === 'pending_verification').length}
               </span>
             )}
           </button>
