@@ -14041,6 +14041,18 @@ html, body {
   color: #475569;
 }
 
+@media (max-width: 480px) {
+  .btn-confirm-checkout-order {
+    font-size: 14px;
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  .btn-confirm-pill-amt {
+    font-size: 12px;
+    padding: 2px 8px;
+  }
+}
+
 /* Success View */
 .checkout-success-container {
   padding: 36px 20px;

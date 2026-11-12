@@ -403,7 +403,7 @@ export function PaymentCheckoutModal({
                   ) : (
                     <>
                       <CheckCircle2 size={18} />
-                      <span className="btn-confirm-txt">ยืนยันการชำระเงิน</span>
+                      <span className="btn-confirm-txt">ยืนยันชำระเงิน</span>
                       <span className="btn-confirm-pill-amt">{finalTotal.toLocaleString()} ฿</span>
                     </>
                   )}
