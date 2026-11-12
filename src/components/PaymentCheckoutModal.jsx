@@ -13,7 +13,6 @@ import {
   ArrowRight,
   ShieldCheck,
   User,
-  Phone,
   FileImage,
   RefreshCw,
   ExternalLink
@@ -319,20 +318,6 @@ export function PaymentCheckoutModal({
                     <span className="checkout-field-tip">
                       ระบุชื่อสำหรับบันทึกรายการจองและประกาศรางวัล
                     </span>
-                  </div>
-
-                  <div className="checkout-field-block">
-                    <label className="checkout-field-label">
-                      <Phone size={14} className="text-emerald" />
-                      <span>เบอร์โทรศัพท์ หรือ LINE ID (ไม่บังคับ)</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="checkout-input-styled"
-                      placeholder="เช่น 081-234-5678 หรือ LINE ID"
-                      value={customerContact}
-                      onChange={(e) => setCustomerContact(e.target.value)}
-                    />
                   </div>
                 </div>
 
