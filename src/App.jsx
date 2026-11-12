@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppNavbar } from './components/AppNavbar';
 import { CardHomePage } from './components/CardHomePage';
 import { CardsPage } from './components/CardsPage';
+import { CustomBordersPage } from './components/CustomBordersPage';
 import { RoundDetailPage } from './components/RoundDetailPage';
 import { CreateRoundModal } from './components/CreateRoundModal';
 import { ContactModal } from './components/ContactModal';
@@ -28,6 +29,20 @@ import {
 } from './utils/supabaseClient';
 import { DEFAULT_PAYMENT_CONFIG } from './utils/promptpay';
 import { saveMusicSettings } from './utils/musicData';
+import {
+  DEFAULT_BORDERS,
+  DEFAULT_MATERIALS,
+  DEFAULT_SHIPPING,
+  loadBordersCatalog,
+  saveBordersCatalog,
+  loadMaterialsConfig,
+  saveMaterialsConfig,
+  loadShippingConfig,
+  saveShippingConfig,
+  loadBorderOrders,
+  saveBorderOrders,
+  getNextOrderCode
+} from './utils/customBordersData';
 import confetti from 'canvas-confetti';
 import './App.css';
 
@@ -161,7 +176,13 @@ function App() {
     return initialStoreCards;
   });
 
-  // URL-driven navigation: 'home' (Cards Gallery) | 'board' (Round Detail) | 'cards' (Graded Cards) | 'admin' (Admin Backend)
+  // Custom Slab Borders State
+  const [borders, setBorders] = useState(DEFAULT_BORDERS);
+  const [materials, setMaterials] = useState(DEFAULT_MATERIALS);
+  const [shippingConfig, setShippingConfig] = useState(DEFAULT_SHIPPING);
+  const [borderOrders, setBorderOrders] = useState([]);
+
+  // URL-driven navigation: 'home' (Cards Gallery) | 'board' (Round Detail) | 'cards' (Graded Cards) | 'borders' (Custom Borders) | 'admin' (Admin Backend)
   const [currentRoundId, setCurrentRoundId] = useState(() => {
     const fromUrl = getCardIdFromLocation();
     return fromUrl || initialLotteryRounds[0].id;
@@ -170,6 +191,7 @@ function App() {
   const [viewMode, setViewMode] = useState(() => {
     if (checkIsAdminUrl()) return 'admin';
     const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'borders') return 'borders';
     if (urlParams.get('tab') === 'cards') return 'cards';
     if (urlParams.get('tab') === 'contact' || window.location.pathname.endsWith('/contact')) return 'contact';
     const fromUrl = getCardIdFromLocation();
@@ -178,6 +200,7 @@ function App() {
 
   const [activeTab, setActiveTab] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'borders') return 'borders';
     if (urlParams.get('tab') === 'cards') return 'cards';
     if (urlParams.get('tab') === 'contact' || window.location.pathname.endsWith('/contact')) return 'contact';
     const fromUrl = getCardIdFromLocation();
@@ -191,6 +214,25 @@ function App() {
 
   // Active round object
   const currentRound = rounds.find(r => r.id === currentRoundId) || rounds[0] || initialLotteryRounds[0];
+
+  // Load custom slab borders data on mount
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      loadBordersCatalog(),
+      loadMaterialsConfig(),
+      loadShippingConfig(),
+      loadBorderOrders()
+    ]).then(([loadedBorders, loadedMaterials, loadedShipping, loadedOrders]) => {
+      if (isMounted) {
+        if (loadedBorders) setBorders(loadedBorders);
+        if (loadedMaterials) setMaterials(loadedMaterials);
+        if (loadedShipping) setShippingConfig(loadedShipping);
+        if (loadedOrders) setBorderOrders(loadedOrders);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   // Supabase Cloud Data Initial Load & Realtime Subscriptions
   useEffect(() => {
@@ -392,6 +434,45 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleNavBorders = () => {
+    setActiveTab('borders');
+    setViewMode('borders');
+    window.history.pushState({ view: 'borders' }, '', `${window.location.pathname}?tab=borders`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleUpdateBorders = (next) => {
+    setBorders(next);
+    saveBordersCatalog(next);
+  };
+
+  const handleUpdateMaterials = (next) => {
+    setMaterials(next);
+    saveMaterialsConfig(next);
+  };
+
+  const handleUpdateShipping = (next) => {
+    setShippingConfig(next);
+    saveShippingConfig(next);
+  };
+
+  const handleUpdateBorderOrders = (next) => {
+    setBorderOrders(next);
+    saveBorderOrders(next);
+  };
+
+  const handleSaveNewBorderOrder = async (orderData) => {
+    const { orderCode } = await getNextOrderCode();
+    const newOrder = {
+      ...orderData,
+      id: `order-${Date.now()}`,
+      orderCode
+    };
+    const updated = [newOrder, ...borderOrders];
+    handleUpdateBorderOrders(updated);
+    return newOrder;
+  };
+
   const handleNavContact = () => {
     setActiveTab('contact');
     setViewMode('contact');
@@ -443,6 +524,14 @@ function App() {
           onUpdateRounds={handleUpdateRounds}
           storeCards={storeCards}
           onUpdateStoreCards={handleUpdateStoreCards}
+          borders={borders}
+          onUpdateBorders={handleUpdateBorders}
+          materials={materials}
+          onUpdateMaterials={handleUpdateMaterials}
+          shippingConfig={shippingConfig}
+          onUpdateShipping={handleUpdateShipping}
+          orders={borderOrders}
+          onUpdateOrders={handleUpdateBorderOrders}
           onExitAdmin={handleNavHome}
           paymentConfig={paymentConfig}
           onUpdatePaymentConfig={setPaymentConfig}
@@ -461,6 +550,7 @@ function App() {
         onSelectTab={setActiveTab}
         onNavigateHome={handleNavHome}
         onNavigateCards={handleNavCards}
+        onNavigateBorders={handleNavBorders}
         onOpenContact={handleNavContact}
         isAdmin={isAdmin}
       />
@@ -476,7 +566,19 @@ function App() {
         />
       )}
 
-      {/* VIEW 2: CARDS SHOWCASE PAGE (หน้าการ์ดแยกออกมาเดี่ยวๆ: ผลงานการส่งเกรดของเรา) */}
+      {/* VIEW 2: CUSTOM BORDERS PAGE (หน้าสั่งทำขอบการ์ดเกรด PSA, CGC, PCG, BGS - แทนเมนูการ์ดเดิม) */}
+      {viewMode === 'borders' && (
+        <CustomBordersPage
+          borders={borders}
+          materials={materials}
+          shippingConfig={shippingConfig}
+          paymentConfig={paymentConfig}
+          onSaveOrder={handleSaveNewBorderOrder}
+          onNavigateHome={handleNavHome}
+        />
+      )}
+
+      {/* VIEW 3: CARDS SHOWCASE PAGE (หน้าการ์ดแยกออกมาเดี่ยวๆ) */}
       {viewMode === 'cards' && (
         <CardsPage
           cards={storeCards}

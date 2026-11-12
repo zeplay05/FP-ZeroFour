@@ -40,6 +40,7 @@ import {
   Coins
 } from 'lucide-react';
 import { AdminMusicTab } from './AdminMusicTab';
+import { AdminBordersTab } from './AdminBordersTab';
 import { SlipViewerModal } from './SlipViewerModal';
 import { PaymentSettingsModal } from './PaymentSettingsModal';
 import { getBoardTypeInfo, BOARD_TYPES, calculateBookingPrice } from '../utils/lotteryData';
@@ -107,6 +108,14 @@ export function AdminDashboard({
   onUpdateRounds,
   storeCards,
   onUpdateStoreCards,
+  borders = [],
+  onUpdateBorders,
+  materials = [],
+  onUpdateMaterials,
+  shippingConfig,
+  onUpdateShipping,
+  orders = [],
+  onUpdateOrders,
   onExitAdmin,
   paymentConfig,
   onUpdatePaymentConfig
@@ -1052,11 +1061,25 @@ export function AdminDashboard({
 
           <button
             type="button"
+            className={`admin-nav-tab-btn ${activeTab === 'borders' ? 'active' : ''}`}
+            onClick={() => setActiveTab('borders')}
+          >
+            <ShoppingBag size={17} />
+            <span>2. ขอบการ์ด & ออเดอร์</span>
+            {orders.filter(o => o.status === 'pending_verification').length > 0 && (
+              <span className="admin-nav-pulse-badge">
+                {orders.filter(o => o.status === 'pending_verification').length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
             className={`admin-nav-tab-btn ${activeTab === 'cards' ? 'active' : ''}`}
             onClick={() => setActiveTab('cards')}
           >
             <CreditCard size={17} />
-            <span>2. จัดการการ์ด</span>
+            <span>3. จัดการการ์ด</span>
           </button>
 
           <button
@@ -1065,7 +1088,7 @@ export function AdminDashboard({
             onClick={() => setActiveTab('music')}
           >
             <Music size={17} />
-            <span>3. จัดการเพลงพื้นหลัง</span>
+            <span>4. จัดการเพลงพื้นหลัง</span>
           </button>
         </div>
       </header>
@@ -2528,7 +2551,25 @@ export function AdminDashboard({
       )}
 
       {/* =========================================================================
-          TAB 3: จัดการเพลงพื้นหลัง (Background Music)
+          TAB 2: จัดการขอบการ์ด & ออเดอร์ (Slab Borders & Orders)
+          ========================================================================= */}
+      {activeTab === 'borders' && (
+        <main className="admin-main-container">
+          <AdminBordersTab
+            borders={borders}
+            materials={materials}
+            shippingConfig={shippingConfig}
+            orders={orders}
+            onUpdateBorders={onUpdateBorders}
+            onUpdateMaterials={onUpdateMaterials}
+            onUpdateShipping={onUpdateShipping}
+            onUpdateOrders={onUpdateOrders}
+          />
+        </main>
+      )}
+
+      {/* =========================================================================
+          TAB 4: จัดการเพลงพื้นหลัง (Background Music)
           ========================================================================= */}
       {activeTab === 'music' && (
         <main className="admin-main-container">

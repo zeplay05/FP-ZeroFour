@@ -16,6 +16,7 @@ export function AppNavbar({
   onSelectTab,
   onNavigateHome,
   onNavigateCards,
+  onNavigateBorders,
   onOpenContact,
   onOpenAdminLogin,
   isAdmin
@@ -43,6 +44,7 @@ export function AppNavbar({
   // Check if Home tab is active
   const isHomeActive = viewMode === 'home' && (!activeTab || activeTab === 'home');
   const isCardsActive = viewMode === 'cards' || activeTab === 'cards';
+  const isBordersActive = viewMode === 'borders' || activeTab === 'borders';
   const isBoardsActive = activeTab === 'boards';
   const isHowToActive = activeTab === 'how-to-book';
   const isContactActive = viewMode === 'contact' || activeTab === 'contact';
@@ -86,17 +88,20 @@ export function AppNavbar({
           <span>หน้าแรก</span>
         </button>
 
-        {/* 2. เมนูการ์ด (ปิด Disabled พร้อมแท็บเล็กๆ Coming soon) */}
+        {/* 2. เมนูขอบการ์ด (สั่งทำขอบเคสเกรด PSA, CGC, PCG, BGS) */}
         <button
           type="button"
-          className="nav-v2-tab-item nav-item-disabled"
-          disabled
-          aria-disabled="true"
-          title="การ์ด (Coming soon)"
+          className={`nav-v2-tab-item ${isBordersActive ? 'active' : ''}`}
+          onClick={() => {
+            onNavigateBorders?.();
+            onSelectTab?.('borders');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          title="สั่งทำขอบการ์ดเกรด PSA, CGC, PCG, BGS"
         >
           <Layers size={17} className="nav-tab-icon" />
-          <span>การ์ด</span>
-          <span className="nav-coming-soon-badge">Coming soon</span>
+          <span>ขอบการ์ด</span>
+          <span className="nav-hot-badge">ใหม่</span>
         </button>
 
         {/* 3. กระดาน */}
@@ -176,16 +181,20 @@ export function AppNavbar({
 
           <button
             type="button"
-            className="mobile-nav-item nav-item-disabled"
-            disabled
-            aria-disabled="true"
-            title="การ์ด (Coming soon)"
+            className={`mobile-nav-item ${isBordersActive ? 'active' : ''}`}
+            onClick={() => {
+              handleMenuClick(() => {
+                onNavigateBorders?.();
+                onSelectTab?.('borders');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              });
+            }}
           >
             <div className="mobile-nav-item-content">
               <Layers size={18} />
-              <span>การ์ด</span>
+              <span>ขอบการ์ด</span>
             </div>
-            <span className="nav-coming-soon-badge">Coming soon</span>
+            <span className="nav-hot-badge">ใหม่</span>
           </button>
 
           <button
