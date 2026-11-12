@@ -391,8 +391,9 @@ export function PaymentCheckoutModal({
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 size={19} />
-                      <span>ยืนยันการชำระเงิน & จองเลขทันที ({finalTotal.toLocaleString()} ฿)</span>
+                      <CheckCircle2 size={18} />
+                      <span className="btn-confirm-txt">ยืนยันการชำระเงิน</span>
+                      <span className="btn-confirm-pill-amt">{finalTotal.toLocaleString()} ฿</span>
                     </>
                   )}
                 </button>
